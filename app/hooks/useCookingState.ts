@@ -67,6 +67,7 @@ interface UseCookingState {
   handleIngredientAction: (ingredientFullText: string) => void;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleUpload: () => Promise<void>;
+  generateGeminiRecipe: (userPrompt: string) => Promise<void>;
 }
 
 export const useCookingState = (): UseCookingState => {
@@ -258,6 +259,35 @@ export const useCookingState = (): UseCookingState => {
     }
   };
 
+  const generateGeminiRecipe = async (userPrompt: string) => {
+    setView('processing');
+    try {
+      const res = await fetch('/api/gemini/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userPrompt }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erreur génération Gemini.');
+      }
+
+      const data = await res.json();
+      const generatedText = data.generatedRecipeText;
+      setRawText(generatedText); // Set rawText for parsing
+      setRecipe(parseRecipe(generatedText));
+      setCheckedIngredients(new Set());
+      setCurrentStep(-1);
+      setView('cooking');
+    } catch (err) {
+      console.error(err);
+      setView('input');
+      alert("Erreur lors de la génération de recette par Gemini : " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+
   const handleIngredientAction = (ingredientFullText: string) => {
     if (isGeminiMode) {
       openGeminiModal(ingredientFullText);
@@ -378,5 +408,6 @@ export const useCookingState = (): UseCookingState => {
     handleIngredientAction,
     handleFileChange,
     handleUpload,
+    generateGeminiRecipe,
   };
 };

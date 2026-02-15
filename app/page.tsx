@@ -64,6 +64,7 @@ export default function Home() {
     handleIngredientAction,
     handleFileChange,
     handleUpload,
+    generateGeminiRecipe,
   } = useCookingState();
 
   switch (view) {
@@ -88,6 +89,7 @@ export default function Home() {
           theme={theme}
           setActiveThemeId={setActiveThemeId}
           t={t}
+          handleGeminiGenerate={generateGeminiRecipe}
         />
       );
     case 'processing':

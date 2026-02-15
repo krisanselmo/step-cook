@@ -27,6 +27,7 @@ interface InputViewProps {
   theme: UseCookingState['theme'];
   setActiveThemeId: UseCookingState['setActiveThemeId'];
   t: UseCookingState['t'];
+  handleGeminiGenerate: (prompt: string) => void;
 }
 
 export const InputView: React.FC<InputViewProps> = ({
@@ -48,9 +49,11 @@ export const InputView: React.FC<InputViewProps> = ({
   theme,
   setActiveThemeId,
   t,
+  handleGeminiGenerate,
 }) => {
   const ThemeIcon = theme.icon;
-  const [showMealieList, setShowMealieList] = useState(true); // State to control which section is shown on mobile
+  const [activeTab, setActiveTab] = useState<'mealie' | 'manual' | 'gemini'>('mealie'); // State to control which section is shown on mobile
+  const [geminiText, setGeminiText] = useState<string>(''); // State for Gemini input
 
   return (
     <div className={`min-h-screen ${theme.properties.font} flex flex-col items-center justify-center p-4 transition-colors duration-300 ${t(theme.colors.rootBgDark, theme.colors.rootBgLight)}`}>
@@ -75,23 +78,29 @@ export const InputView: React.FC<InputViewProps> = ({
         <div className="flex w-full md:hidden mb-4 justify-center">
           <div className={`inline-flex ${theme.properties.radius} overflow-hidden border ${t('border-gray-700', 'border-gray-200')}`}>
             <button
-              onClick={() => setShowMealieList(true)}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${showMealieList ? `${theme.colors.bgPrimary} text-white` : t('bg-gray-800 text-gray-300', 'bg-white text-gray-700 hover:bg-gray-50')}`}
+              onClick={() => setActiveTab('mealie')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'mealie' ? `${theme.colors.bgPrimary} text-white` : t('bg-gray-800 text-gray-300', 'bg-white text-gray-700 hover:bg-gray-50')}`}
             >
               Mealie
             </button>
             <button
-              onClick={() => setShowMealieList(false)}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${!showMealieList ? `${theme.colors.bgPrimary} text-white` : t('bg-gray-800 text-gray-300', 'bg-white text-gray-700 hover:bg-gray-50')}`}
+              onClick={() => setActiveTab('manual')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'manual' ? `${theme.colors.bgPrimary} text-white` : t('bg-gray-800 text-gray-300', 'bg-white text-gray-700 hover:bg-gray-50')}`}
             >
               Manuel
+            </button>
+            <button
+              onClick={() => setActiveTab('gemini')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'gemini' ? `${theme.colors.bgPrimary} text-white` : t('bg-gray-800 text-gray-300', 'bg-white text-gray-700 hover:bg-gray-50')}`}
+            >
+              Gemini
             </button>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 flex-1 overflow-hidden">
+        <div className="grid md:grid-cols-3 gap-6 flex-1 overflow-hidden">
           {/* Colonne Gauche: Liste Mealie */}
-          <div className={`${showMealieList ? 'flex' : 'hidden'} md:flex flex-col ${theme.properties.radius} border shadow-xl overflow-hidden transition-colors ${t(theme.colors.cardBgDark, theme.colors.cardBgLight)}`}>
+          <div className={`${activeTab === 'mealie' ? 'flex' : 'hidden'} md:flex flex-col ${theme.properties.radius} border shadow-xl overflow-hidden transition-colors ${t(theme.colors.cardBgDark, theme.colors.cardBgLight)}`}>
 
             <div className={`p-4 border-b flex flex-col gap-3 ${t('border-gray-800/50', 'border-gray-100')}`}>
               <div className="flex items-center justify-between">
@@ -167,7 +176,7 @@ export const InputView: React.FC<InputViewProps> = ({
           </div>
 
           {/* Colonne Droite: Zone de texte manuelle */}
-          <div className={`${!showMealieList ? 'flex' : 'hidden'} md:flex flex-col p-4 ${theme.properties.radius} border shadow-xl transition-colors ${t(theme.colors.cardBgDark, theme.colors.cardBgLight)}`}>
+          <div className={`${activeTab === 'manual' ? 'flex' : 'hidden'} md:flex flex-col p-4 ${theme.properties.radius} border shadow-xl transition-colors ${t(theme.colors.cardBgDark, theme.colors.cardBgLight)}`}>
             <h2 className="font-bold mb-2 text-sm uppercase tracking-wider text-gray-500">Mode Manuel</h2>
             <textarea
               className={`flex-1 w-full p-4 ${theme.properties.radius} border outline-none resize-none font-mono text-xs leading-relaxed transition-colors mb-4 focus:${theme.colors.borderAccent} ${t('bg-black/50 text-white border-gray-800/50', 'bg-gray-50 text-gray-900 border-gray-200')}`}
@@ -177,6 +186,20 @@ export const InputView: React.FC<InputViewProps> = ({
             />
             <Button onClick={handleProcess} className="w-full" disabled={!rawText.trim()} theme={theme}>
               Cuisiner <ChevronRight size={18} />
+            </Button>
+          </div>
+
+          {/* Colonne Droit: Gemini IA */}
+          <div className={`${activeTab === 'gemini' ? 'flex' : 'hidden'} md:flex flex-col p-4 ${theme.properties.radius} border shadow-xl transition-colors ${t(theme.colors.cardBgDark, theme.colors.cardBgLight)}`}>
+            <h2 className="font-bold mb-2 text-sm uppercase tracking-wider text-gray-500">Assistant Gemini</h2>
+            <textarea
+              className={`flex-1 w-full p-4 ${theme.properties.radius} border outline-none resize-none font-mono text-xs leading-relaxed transition-colors mb-4 focus:${theme.colors.borderAccent} ${t('bg-black/50 text-white border-gray-800/50', 'bg-gray-50 text-gray-900 border-gray-200')}`}
+              placeholder="Décrivez votre recette de rêve (ex: 'Recette végétarienne rapide, avec des lentilles et beaucoup de légumes')..."
+              value={geminiText}
+              onChange={(e) => setGeminiText(e.target.value)}
+            />
+            <Button onClick={() => handleGeminiGenerate(geminiText)} className="w-full" disabled={!geminiText.trim()} theme={theme}>
+              Générer Recette <Sparkles size={18} />
             </Button>
           </div>
         </div>
