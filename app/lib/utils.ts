@@ -70,11 +70,46 @@ export const extractStepParams = (text: string): StepParams => {
   return { time, temp, speed, seconds, reverse };
 };
 
-export const parseRecipe = (text: string, slug?: string): Recipe => {
+// Fonction utilitaire pour nettoyer le texte des étapes (gestion des //)
+const cleanStepText = (line: string): string => {
+  // Si // est suivi d'un chiffre, on remplace par "sens inverse"
+  if (line.match(/\/\/\d/)) {
+    return line.replace(/\/\//g, ' (sens inverse) ');
+  }
+  // Si // est à la fin ou seul, on précise le mijotage
+  if (line.includes('//')) {
+    return line.replace(/\/\//g, ' (sens inverse + mijotage) ');
+  }
+  return line;
+};
+
+export const parseRecipe = (input: string, slug?: string): Recipe => {
+  try {
+    const trimmedInput = input.trim();
+
+    if (trimmedInput.startsWith('{') && trimmedInput.endsWith('}')) {
+      const jsonRecipe = JSON.parse(trimmedInput);
+
+      if (jsonRecipe.title && Array.isArray(jsonRecipe.steps)) {
+        return {
+          title: jsonRecipe.title,
+          ingredients: Array.isArray(jsonRecipe.ingredients)
+            ? jsonRecipe.ingredients.map((ing: string) => parseIngredientLine(ing))
+            : [],
+          steps: jsonRecipe.steps.map((step: string) => cleanStepText(step)),
+          slug
+        };
+      }
+    }
+  } catch (e) {
+    console.log("Input is not valid JSON, falling back to text parsing.");
+  }
+
+  // 2. PARSING TEXTE CLASSIQUE (Fallback)
   // On ignore les lignes d'images type Markdown ![alt](url)
   const imageRegex = /!\[.*\]\(.*\)/;
 
-  const lines = text.split('\n')
+  const lines = input.split('\n')
   .filter(line => line.trim() !== '')
   .filter(line => !imageRegex.test(line));
 
@@ -87,18 +122,6 @@ export const parseRecipe = (text: string, slug?: string): Recipe => {
   const stepKeywords = ['préparation', 'étape', 'instruction', 'recette', 'instructions'];
 
   const addIngredient = (line: string) => ingredients.push(parseIngredientLine(line));
-
-  const cleanStepText = (line: string): string => {
-    // Si // est suivi d'un chiffre, on remplace par "sens inverse"
-    if (line.match(/\/\/\d/)) {
-      return line.replace(/\/\//g, ' (sens inverse) ');
-    }
-    // Si // est à la fin ou seul, on précise le mijotage
-    if (line.includes('//')) {
-      return line.replace(/\/\//g, ' (sens inverse + mijotage) ');
-    }
-    return line;
-  };
 
   if (lines.length < 5) {
     steps = lines.map(l => cleanStepText(l));
