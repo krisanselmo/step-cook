@@ -2,111 +2,77 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Play,
-  Pause,
-  RotateCcw, // Sens inverse
-  RotateCw,  // Sens normal
-  ChefHat,
-  Home,
-  ChevronRight,
-  ChevronLeft,
-  Scale,
-  Wheat, // Pour le mode Pétrin
-  Zap,   // Pour le mode Turbo
-  Sun,
-  Moon,
-  Sparkles, // Pour l'IA Gemini
-  X,
+  Play, Pause, RotateCcw, RotateCw, ChefHat,
+  Home as HomeIcon, ChevronRight, ChevronLeft, Scale,
+  Wheat, Zap, Sun, Moon, Sparkles, X
 } from 'lucide-react';
 
-// --- Données de Démo ---
+// --- TYPES & INTERFACES ---
 
-const DEMO_RECIPES = {
+interface Ingredient {
+  fullText: string;
+  keywords: string[];
+}
+
+interface StepParams {
+  time: string;
+  temp: string;
+  speed: string;
+  seconds: number;
+  reverse: boolean;
+}
+
+interface Recipe {
+  title: string;
+  ingredients: Ingredient[];
+  steps: string[];
+}
+
+interface DemoRecipe {
+  name: string;
+  text: string;
+}
+
+interface ModalData {
+  ingredient: string;
+  suggestion: string;
+  loading: boolean;
+}
+
+type ViewState = 'input' | 'processing' | 'cooking';
+
+interface ButtonProps {
+  children: React.ReactNode;
+  onClick: () => void;
+  className?: string;
+  variant?: 'primary' | 'secondary' | 'ghost';
+  disabled?: boolean;
+}
+
+// --- DONNÉES DE DÉMO ---
+
+const DEMO_RECIPES: Record<string, DemoRecipe> = {
   veloute: {
     name: "Velouté",
-    text: `Velouté de Potimarron
-  
-Ingrédients:
-- 500g de potimarron
-- 1 oignon
-- 2 pommes de terre
-- 500g d'eau
-- 1 cube de bouillon
-- 20g de crème fraîche
-
-Préparation:
-1. Mettre l'oignon coupé en deux dans le bol.
-2. Hacher 5 sec vitesse 5.
-3. Ajouter le potimarron et les pommes de terre en morceaux.
-4. Ajouter l'eau et le cube de bouillon.
-5. Cuire 20 min 100°C vitesse 1, sens inverse.
-6. À la fin de la cuisson, ajouter la crème fraîche.
-7. Mixer 1 min vitesse 10.`
+    text: `Velouté de Potimarron\n\nIngrédients:\n- 500g de potimarron\n- 1 oignon\n- 2 pommes de terre\n- 500g d'eau\n- 1 cube de bouillon\n- 20g de crème fraîche\n\nPréparation:\n1. Mettre l'oignon coupé en deux dans le bol.\n2. Hacher 5 sec vitesse 5.\n3. Ajouter le potimarron et les pommes de terre en morceaux.\n4. Ajouter l'eau et le cube de bouillon.\n5. Cuire 20 min 100°C vitesse 1, sens inverse.\n6. À la fin de la cuisson, ajouter la crème fraîche.\n7. Mixer 1 min vitesse 10.`
   },
   pizza: {
     name: "Pâte Pizza",
-    text: `Pâte à Pizza Italienne
-
-Ingrédients:
-- 30g d'huile d'olive extra vierge
-- 220g d'eau tiède
-- 1 c.à.c de sucre
-- 20g de levure boulangère fraîche
-- 400g de farine de blé (type 00)
-- 1 c.à.c de sel
-
-Préparation:
-1. Mettre l'eau, le sucre et la levure dans le bol.
-2. Mélanger 20 sec vitesse 2.
-3. Ajouter la farine, l'huile et le sel.
-4. Activer le mode Pétrin pendant 2 min.
-5. Transvaser la pâte dans un saladier huilé et former une boule.
-6. Laisser pousser 1h à température ambiante.`
+    text: `Pâte à Pizza Italienne\n\nIngrédients:\n- 30g d'huile d'olive extra vierge\n- 220g d'eau tiède\n- 1 c.à.c de sucre\n- 20g de levure boulangère fraîche\n- 400g de farine de blé (type 00)\n- 1 c.à.c de sel\n\nPréparation:\n1. Mettre l'eau, le sucre et la levure dans le bol.\n2. Mélanger 20 sec vitesse 2.\n3. Ajouter la farine, l'huile et le sel.\n4. Activer le mode Pétrin pendant 2 min.\n5. Transvaser la pâte dans un saladier huilé et former une boule.\n6. Laisser pousser 1h à température ambiante.`
   },
   crepes: {
     name: "Crêpes",
-    text: `Pâte à Crêpes Express
-
-Ingrédients:
-- 250g de farine
-- 500g de lait
-- 2 oeufs
-- 1 c.à.s d'huile
-- 1 pincée de sel
-
-Préparation:
-1. Mettre tous les ingrédients dans le bol.
-2. Mode Turbo 2 sec (pour casser les grumeaux si besoin).
-3. Mixer 20 sec vitesse 6.
-4. Racler les parois du bol avec la spatule.
-5. Mixer 5 sec vitesse 6.
-6. Laisser reposer la pâte 30 min avant cuisson.`
+    text: `Pâte à Crêpes Express\n\nIngrédients:\n- 250g de farine\n- 500g de lait\n- 2 oeufs\n- 1 c.à.s d'huile\n- 1 pincée de sel\n\nPréparation:\n1. Mettre tous les ingrédients dans le bol.\n2. Mode Turbo 2 sec (pour casser les grumeaux si besoin).\n3. Mixer 20 sec vitesse 6.\n4. Racler les parois du bol avec la spatule.\n5. Mixer 5 sec vitesse 6.\n6. Laisser reposer la pâte 30 min avant cuisson.`
   },
   risotto: {
     name: "Risotto",
-    text: `Risotto Champignons
-
-Ingrédients:
-- 300g de riz arborio
-- 250g de champignons
-- 40g de beurre
-- 50g de parmesan
-- 1 échalote
-- 10 cl de vin blanc
-- 700g d'eau
-
-Préparation:
-1. Mettre l'échalote dans le bol. Hacher 5 sec vitesse 5.
-2. Ajouter le beurre et les champignons. Rissoler 3 min 100°C vitesse 1.
-3. Ajouter le riz et le vin blanc. Cuire 2 min 100°C vitesse 1 sens inverse.
-4. Ajouter l'eau et le bouillon. Cuire 15 min 100°C vitesse 1 sens inverse.
-5. Ajouter le parmesan. Mélanger 1 min vitesse 2 sens inverse.`
+    text: `Risotto Champignons\n\nIngrédients:\n- 300g de riz arborio\n- 250g de champignons\n- 40g de beurre\n- 50g de parmesan\n- 1 échalote\n- 10 cl de vin blanc\n- 700g d'eau\n\nPréparation:\n1. Mettre l'échalote dans le bol. Hacher 5 sec vitesse 5.\n2. Ajouter le beurre et les champignons. Rissoler 3 min 100°C vitesse 1.\n3. Ajouter le riz et le vin blanc. Cuire 2 min 100°C vitesse 1 sens inverse.\n4. Ajouter l'eau et le bouillon. Cuire 15 min 100°C vitesse 1 sens inverse.\n5. Ajouter le parmesan. Mélanger 1 min vitesse 2 sens inverse.`
   }
 };
 
-// --- Composants UI ---
+// --- COMPOSANT UI ---
 
-const Button = ({ children, onClick, className = "", variant = "primary", disabled }) => {
+const Button: React.FC<ButtonProps> = ({ children, onClick, className = "", variant = "primary", disabled }) => {
   const baseStyle = "px-4 py-3 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:scale-100";
   const variants = {
     primary: "bg-green-600 text-white shadow-lg shadow-green-900/50 hover:bg-green-500",
@@ -121,10 +87,10 @@ const Button = ({ children, onClick, className = "", variant = "primary", disabl
   );
 };
 
-// --- Logique "IA" de Parsing ---
+// --- LOGIQUE DE PARSING ---
 
-const parseIngredientLine = (line) => {
-  const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+const parseIngredientLine = (line: string): Ingredient => {
+  const cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
   const stopWords = ['de', 'd\'', 'du', 'des', 'le', 'la', 'les', 'un', 'une', 'en', 'à', 'au', 'aux', 'et', 'ou', 'g', 'kg', 'mg', 'l', 'cl', 'ml'];
 
   const tokens = cleanLine.toLowerCase()
@@ -136,7 +102,7 @@ const parseIngredientLine = (line) => {
   return { fullText: cleanLine, keywords: tokens };
 };
 
-const extractStepParams = (text) => {
+const extractStepParams = (text: string): StepParams => {
   let time = "--:--";
   let temp = "---";
   let speed = "---";
@@ -163,7 +129,6 @@ const extractStepParams = (text) => {
   }
 
   // 3. Vitesse & Modes Spéciaux (Pétrin, Turbo)
-  // On cherche d'abord les modes spéciaux qui remplacent la vitesse numérique
   const lowerText = text.toLowerCase();
 
   if (lowerText.match(/pétrin|pétrir|épi/)) {
@@ -186,17 +151,17 @@ const extractStepParams = (text) => {
   return { time, temp, speed, seconds, reverse };
 };
 
-const parseRecipe = (text) => {
+const parseRecipe = (text: string): Recipe => {
   const lines = text.split('\n').filter(line => line.trim() !== '');
-  let title = lines[0] || "Recette";
-  let ingredients = [];
-  let steps = [];
+  const title = lines[0] || "Recette";
+  const ingredients: Ingredient[] = [];
+  let steps: string[] = [];
   let currentSection = 'unknown';
 
   const ingredientKeywords = ['ingrédient', 'ingredients', 'il vous faut', 'liste'];
   const stepKeywords = ['préparation', 'étape', 'instruction', 'recette'];
 
-  const addIngredient = (line) => ingredients.push(parseIngredientLine(line));
+  const addIngredient = (line: string) => ingredients.push(parseIngredientLine(line));
 
   if (lines.length < 5) {
     steps = lines;
@@ -223,29 +188,29 @@ const parseRecipe = (text) => {
   return { title, ingredients, steps };
 };
 
-// --- Composant Principal ---
+// --- COMPOSANT PRINCIPAL ---
 
-export default function App() {
-  const [view, setView] = useState('input');
-  const [rawText, setRawText] = useState('');
-  const [recipe, setRecipe] = useState(null);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [timer, setTimer] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [currentTime, setCurrentTime] = useState('12:00');
-  const [selectedDemo, setSelectedDemo] = useState(null);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+export default function Home() {
+  const [view, setView] = useState<ViewState>('input');
+  const [rawText, setRawText] = useState<string>('');
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [currentStep, setCurrentStep] = useState<number>(0);
+  const [timer, setTimer] = useState<number>(0);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+  const [currentTime, setCurrentTime] = useState<string>('12:00');
+  const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
 
   // State pour la modale Gemini/IA
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalData, setModalData] = useState({ ingredient: '', suggestion: '', loading: false });
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [modalData, setModalData] = useState<ModalData>({ ingredient: '', suggestion: '', loading: false });
 
-  const [stepParams, setStepParams] = useState({ time: '--:--', temp: '---', speed: '---', seconds: 0, reverse: false });
-  const [stepIngredients, setStepIngredients] = useState([]);
+  const [stepParams, setStepParams] = useState<StepParams>({ time: '--:--', temp: '---', speed: '---', seconds: 0, reverse: false });
+  const [stepIngredients, setStepIngredients] = useState<Ingredient[]>([]);
 
-  const timerRef = useRef(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const t = (darkClass, lightClass) => isDarkMode ? darkClass : lightClass;
+  const t = (darkClass: string, lightClass: string) => isDarkMode ? darkClass : lightClass;
 
   useEffect(() => {
     const updateClock = () => setCurrentTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
@@ -284,10 +249,12 @@ export default function App() {
     } else if (timer === 0) {
       setIsTimerRunning(false);
     }
-    return () => clearInterval(timerRef.current);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [isTimerRunning, timer]);
 
-  const formatTime = (seconds) => {
+  const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
@@ -302,13 +269,13 @@ export default function App() {
     }, 800);
   };
 
-  const loadDemo = (key) => {
+  const loadDemo = (key: string) => {
     setRawText(DEMO_RECIPES[key].text);
     setSelectedDemo(key);
   };
 
-  // Gestion du clic sur ingrédient
-  const handleIngredientClick = async (ingredientFullText) => {
+  // Gestion du clic sur ingrédient avec appel API Next.js
+  const handleIngredientClick = async (ingredientFullText: string) => {
     setModalOpen(true);
     setModalData({ ingredient: ingredientFullText, suggestion: '', loading: true });
 
@@ -322,6 +289,7 @@ export default function App() {
       const data = await response.json();
       setModalData({ ingredient: ingredientFullText, suggestion: data.suggestion, loading: false });
     } catch (error) {
+      console.error(error);
       setModalData({ ingredient: ingredientFullText, suggestion: "Erreur de connexion avec l'IA.", loading: false });
     }
   };
@@ -343,7 +311,7 @@ export default function App() {
         <div className="max-w-xl w-full flex flex-col h-[90vh] md:h-auto gap-4">
           <div className="text-center shrink-0">
             <ChefHat className="w-12 h-12 text-green-500 mx-auto mb-2" />
-            <h1 className="text-3xl font-bold">StepCook</h1>
+            <h1 className="text-3xl font-bold">ThermoMind</h1>
           </div>
 
           <div className={`flex-1 p-4 rounded-3xl border shadow-2xl flex flex-col gap-4 overflow-hidden transition-colors duration-300 ${t('bg-gray-900 border-gray-800', 'bg-white border-gray-200')}`}>
@@ -392,19 +360,21 @@ export default function App() {
 
   // COOKING MODE
   const isOverview = currentStep === -1;
-  const isFinished = currentStep >= recipe.steps.length;
+  const isFinished = recipe ? currentStep >= recipe.steps.length : false;
 
   const isTempActive = stepParams.temp !== '---';
   const isSpeedActive = stepParams.speed !== '---';
   const isEpi = stepParams.speed === 'EPI';
   const isTurbo = stepParams.speed === 'TURBO';
 
+  if (!recipe) return null;
+
   return (
     <div className={`h-screen w-full font-sans flex flex-col overflow-hidden transition-colors duration-300 ${t('bg-black text-white', 'bg-gray-50 text-gray-900')}`}>
 
       {/* 1. Header Ultra-Fin */}
       <div className="h-10 flex items-center justify-between px-4 z-20 shrink-0">
-        <button onClick={() => setView('input')} className={`transition-colors ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}><Home size={20} /></button>
+        <button onClick={() => setView('input')} className={`transition-colors ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}><HomeIcon size={20} /></button>
         <span className={`text-xs font-bold uppercase tracking-wider truncate px-4 ${t('text-gray-500', 'text-gray-500')}`}>{recipe.title}</span>
 
         <div className="flex items-center gap-3">
@@ -596,20 +566,6 @@ export default function App() {
         )}
 
       </div>
-
-      <style>{`
-        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes spin-slow-reverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
-        @keyframes wiggle { 
-            0%, 100% { transform: rotate(-10deg); } 
-            50% { transform: rotate(10deg); } 
-        }
-        .animate-spin-slow { animation: spin-slow 3s linear infinite; }
-        .animate-spin-slow-reverse { animation: spin-slow-reverse 3s linear infinite; }
-        .animate-wiggle { animation: wiggle 0.5s ease-in-out infinite; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </div>
   );
 }
