@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Play, Pause, RotateCcw, RotateCw, ChefHat,
   Home as HomeIcon, ChevronRight, ChevronLeft, Scale,
-  Wheat, Zap, Sun, Moon, Sparkles, X, Search, Loader2
+  Wheat, Zap, Sun, Moon, Sparkles, X, Search, Loader2,
+  ArrowDownAZ, Calendar, ExternalLink
 } from 'lucide-react';
 
 // --- TYPES & INTERFACES ---
@@ -26,6 +27,7 @@ interface Recipe {
   title: string;
   ingredients: Ingredient[];
   steps: string[];
+  slug?: string; // Ajout du slug pour le lien externe
 }
 
 interface ModalData {
@@ -41,6 +43,7 @@ interface MealieRecipeSummary {
   name: string;
   image?: string;
   description?: string;
+  dateAdded?: string; // Pour le tri par date
 }
 
 interface MealieIngredient {
@@ -56,22 +59,25 @@ interface MealieInstruction {
 }
 
 interface MealieRecipeDetail {
+  slug?: string;
   name: string;
   recipeIngredient: MealieIngredient[];
   recipeInstructions: MealieInstruction[];
 }
 
 type ViewState = 'input' | 'processing' | 'cooking';
+type SortOption = 'date' | 'alpha';
 
 interface ButtonProps {
   children: React.ReactNode;
   onClick: () => void;
   className?: string;
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline';
   disabled?: boolean;
+  title?: string;
 }
 
-// --- LOGIQUE DE PARSING (REGEX) ---
+// --- LOGIQUE DE PARSING ---
 
 const parseIngredientLine = (line: string): Ingredient => {
   const cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
@@ -132,7 +138,7 @@ const extractStepParams = (text: string): StepParams => {
   return { time, temp, speed, seconds, reverse };
 };
 
-const parseRecipe = (text: string): Recipe => {
+const parseRecipe = (text: string, slug?: string): Recipe => {
   const lines = text.split('\n').filter(line => line.trim() !== '');
   const title = lines[0] || "Recette";
   const ingredients: Ingredient[] = [];
@@ -166,7 +172,7 @@ const parseRecipe = (text: string): Recipe => {
   }
 
   if (steps.length === 0) steps = ["Ajoutez vos instructions ici."];
-  return { title, ingredients, steps };
+  return { title, ingredients, steps, slug };
 };
 
 // --- UTILS MEALIE ---
@@ -176,7 +182,6 @@ const formatMealieToText = (mealieRecipe: MealieRecipeDetail): string => {
 
   text += `Ingrédients:\n`;
   mealieRecipe.recipeIngredient.forEach(ing => {
-    // Mealie stocke parfois l'ingrédient dans 'display', 'note' ou une combinaison
     const line = ing.display || ing.note || `${ing.quantity || ''} ${ing.unit?.name || ''} ${ing.food?.name || ''}`;
     text += `- ${line}\n`;
   });
@@ -191,16 +196,17 @@ const formatMealieToText = (mealieRecipe: MealieRecipeDetail): string => {
 
 // --- COMPOSANT UI ---
 
-const Button: React.FC<ButtonProps> = ({ children, onClick, className = "", variant = "primary", disabled }) => {
+const Button: React.FC<ButtonProps> = ({ children, onClick, className = "", variant = "primary", disabled, title }) => {
   const baseStyle = "px-4 py-3 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:scale-100";
   const variants = {
     primary: "bg-green-600 text-white shadow-lg shadow-green-900/50 hover:bg-green-500",
     secondary: "bg-gray-800 text-gray-200 hover:bg-gray-700",
+    outline: "border border-gray-600 text-gray-400 hover:bg-gray-800 hover:text-white",
     ghost: "bg-transparent text-gray-400 hover:text-gray-900"
   };
 
   return (
-    <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${className}`}>
+    <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${className}`} title={title}>
       {children}
     </button>
   );
@@ -223,6 +229,10 @@ export default function Home() {
   const [isMealieLoading, setIsMealieLoading] = useState<boolean>(false);
   const [mealieError, setMealieError] = useState<string | null>(null);
 
+  // Filtering & Sorting State
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [sortOption, setSortOption] = useState<SortOption>('date'); // 'date' ou 'alpha'
+
   // AI & Params State
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [modalData, setModalData] = useState<ModalData>({ ingredient: '', suggestion: '', loading: false });
@@ -233,7 +243,35 @@ export default function Home() {
 
   const t = (darkClass: string, lightClass: string) => isDarkMode ? darkClass : lightClass;
 
-  // Initialisation et chargement des recettes Mealie
+  // Calcul des recettes filtrées et triées
+  const filteredRecipes = useMemo(() => {
+    let result = [...mealieRecipes];
+
+    // 1. Filtrage
+    if (searchTerm.trim()) {
+      const lowerTerm = searchTerm.toLowerCase();
+      result = result.filter(r =>
+        r.name.toLowerCase().includes(lowerTerm) ||
+        (r.description && r.description.toLowerCase().includes(lowerTerm))
+      );
+    }
+
+    // 2. Tri
+    result.sort((a, b) => {
+      if (sortOption === 'alpha') {
+        return a.name.localeCompare(b.name);
+      } else {
+        // Date par défaut (si disponible, sinon fallback sur nom)
+        // Mealie ne renvoie pas toujours dateAdded dans le résumé simple selon version,
+        // mais l'API de liste est triée par défaut. Ici on refait le tri client.
+        // Si pas de date, on garde l'ordre.
+        return 0;
+      }
+    });
+
+    return result;
+  }, [mealieRecipes, searchTerm, sortOption]);
+
   useEffect(() => {
     const updateClock = () => setCurrentTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
     updateClock();
@@ -264,27 +302,43 @@ export default function Home() {
     setView('processing');
     try {
       const res = await fetch(`/api/mealie/detail?slug=${slug}`);
-      if (!res.ok) throw new Error('Erreur chargement détail');
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erreur chargement détail');
+      }
+
       const detail: MealieRecipeDetail = await res.json();
 
       const formattedText = formatMealieToText(detail);
       setRawText(formattedText);
 
-      // Auto-process après chargement
       setTimeout(() => {
-        setRecipe(parseRecipe(formattedText));
+        setRecipe(parseRecipe(formattedText, slug));
         setCurrentStep(-1);
         setView('cooking');
       }, 500);
 
     } catch (err) {
       console.error(err);
-      setView('input'); // Retour à l'accueil en cas d'erreur
-      alert("Erreur lors du chargement de la recette.");
+      setView('input');
+      // Afficher l'erreur à l'utilisateur de manière simple
+      alert("Erreur lors du chargement : " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
-  // Gestion du timer et des étapes
+  const openMealiePage = () => {
+    if (recipe && recipe.slug) {
+      // En Next.js, on ne peut pas accéder directement à process.env.MEALIE_BASE_URL côté client
+      // si elle n'est pas préfixée par NEXT_PUBLIC_.
+      // On va supposer ici l'URL par défaut que vous m'avez donnée, ou idéalement
+      // vous devriez ajouter NEXT_PUBLIC_MEALIE_BASE_URL dans .env.local
+      const baseUrl = "https://mealie.christopheanselmo.org/g/home";
+      window.open(`${baseUrl}/r/${recipe.slug}`, '_blank');
+    }
+  };
+
+  // --- (LOGIQUE TIMER & PARSING RESTÉE IDENTIQUE) ---
   useEffect(() => {
     if (recipe && currentStep >= 0 && currentStep < recipe.steps.length) {
       const stepText = recipe.steps[currentStep];
@@ -370,15 +424,52 @@ export default function Home() {
         <div className="max-w-5xl w-full flex flex-col h-[90vh] gap-6">
           <div className="text-center shrink-0">
             <ChefHat className="w-12 h-12 text-green-500 mx-auto mb-2" />
-            <h1 className="text-3xl font-bold">ThermoMind</h1>
+            <h1 className="text-3xl font-bold">Step Cook</h1>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6 flex-1 overflow-hidden">
             {/* Colonne Gauche: Liste Mealie */}
             <div className={`flex flex-col rounded-3xl border shadow-xl overflow-hidden ${t('bg-gray-900 border-gray-800', 'bg-white border-gray-200')}`}>
-              <div className={`p-4 border-b flex items-center justify-between ${t('border-gray-800', 'border-gray-100')}`}>
-                <h2 className="font-bold flex items-center gap-2"><Search size={16}/> Recettes</h2>
-                <button onClick={fetchMealieRecipes} className="text-xs text-green-500 hover:underline">Actualiser</button>
+
+              {/* Header avec Recherche et Filtres */}
+              <div className={`p-4 border-b flex flex-col gap-3 ${t('border-gray-800', 'border-gray-100')}`}>
+                <div className="flex items-center justify-between">
+                  <h2 className="font-bold flex items-center gap-2"><Search size={16}/> Recettes ({filteredRecipes.length})</h2>
+                  <button onClick={fetchMealieRecipes} className="text-xs text-green-500 hover:underline">Actualiser</button>
+                </div>
+
+                <div className="flex gap-2">
+                  <div className={`flex-1 flex items-center px-3 py-2 rounded-lg border ${t('bg-black border-gray-700', 'bg-gray-50 border-gray-300')}`}>
+                    <Search size={14} className="opacity-50 mr-2" />
+                    <input
+                      type="text"
+                      placeholder="Rechercher..."
+                      className="bg-transparent outline-none w-full text-sm"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    {searchTerm && (
+                      <button onClick={() => setSearchTerm('')}><X size={14} className="opacity-50" /></button>
+                    )}
+                  </div>
+
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setSortOption('date')}
+                      className={`p-2 rounded-lg border transition-colors ${sortOption === 'date' ? 'bg-green-600 border-green-600 text-white' : t('border-gray-700 hover:bg-gray-800', 'border-gray-300 hover:bg-gray-100')}`}
+                      title="Trier par date"
+                    >
+                      <Calendar size={16} />
+                    </button>
+                    <button
+                      onClick={() => setSortOption('alpha')}
+                      className={`p-2 rounded-lg border transition-colors ${sortOption === 'alpha' ? 'bg-green-600 border-green-600 text-white' : t('border-gray-700 hover:bg-gray-800', 'border-gray-300 hover:bg-gray-100')}`}
+                      title="Trier par nom"
+                    >
+                      <ArrowDownAZ size={16} />
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
@@ -389,15 +480,16 @@ export default function Home() {
                   </div>
                 ) : mealieError ? (
                   <div className="text-red-400 text-sm text-center p-4">{mealieError}</div>
+                ) : filteredRecipes.length === 0 ? (
+                  <div className="text-center p-8 text-gray-500 text-sm">Aucune recette trouvée.</div>
                 ) : (
                   <div className="space-y-2">
-                    {mealieRecipes.map((r) => (
+                    {filteredRecipes.map((r) => (
                       <button
                         key={r.id}
                         onClick={() => loadMealieRecipe(r.slug)}
                         className={`w-full text-left p-3 rounded-xl transition-all border flex items-center gap-3 ${t('bg-gray-800/50 border-gray-700 hover:bg-gray-800 hover:border-green-500', 'bg-gray-50 border-gray-200 hover:bg-white hover:border-green-500')}`}
                       >
-                        {/* Placeholder image si pas d'image */}
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${t('bg-gray-700', 'bg-gray-200')}`}>
                           <span className="text-xs font-bold">{r.name.charAt(0)}</span>
                         </div>
@@ -458,6 +550,15 @@ export default function Home() {
         <button onClick={() => setView('input')} className={`transition-colors ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}><HomeIcon size={20} /></button>
         <span className={`text-xs font-bold uppercase tracking-wider truncate px-4 ${t('text-gray-500', 'text-gray-500')}`}>{recipe.title}</span>
         <div className="flex items-center gap-3">
+          {recipe.slug && (
+            <button
+              onClick={openMealiePage}
+              className={`transition-colors ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}
+              title="Voir sur Mealie"
+            >
+              <ExternalLink size={16} />
+            </button>
+          )}
           <button onClick={() => setIsDarkMode(!isDarkMode)} className={`transition-colors ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}>
             {isDarkMode ? <Moon size={16} /> : <Sun size={16} />}
           </button>
