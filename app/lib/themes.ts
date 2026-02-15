@@ -28,30 +28,37 @@ export const defaultTheme: ThemePlugin = {
   }
 };
 
-// Thème 2 : Dave The Diver (Cyan/Océan)
+// Thème 2 : Dave The Diver (Pixel Art / Bancho Sushi)
 export const daveTheme: ThemePlugin = {
   id: 'dave',
   name: 'Dave The Diver',
-  title: 'Bancho Sushi',
+  title: 'BANCHO SUSHI',
   icon: Fish,
   properties: {
-    font: 'font-sans',
-    radius: 'rounded-xl',
-    buttonStyle: 'shadow-md border-b-4 border-cyan-800 active:border-b-0 active:translate-y-1',
+    font: 'font-pixel',
+    radius: 'rounded-none',
+    // Bouton style "UI de jeu" : Bordure épaisse, ombre dure et décalage au survol/clic
+    buttonStyle: 'border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all',
   },
   colors: {
-    accent: 'text-cyan-400',
-    accentDarker: 'text-cyan-600',
-    bgPrimary: 'bg-cyan-600',
-    bgPrimaryHover: 'hover:bg-cyan-500',
-    borderAccent: 'border-cyan-500',
-    shadowAccent: 'shadow-[0_0_20px_rgba(6,182,212,0.4)]',
-    checkedBgDark: 'bg-cyan-900/30 border-cyan-500/40 text-cyan-300',
-    checkedBgLight: 'bg-cyan-100 border-cyan-300 text-cyan-800',
-    rootBgDark: 'bg-slate-950 text-cyan-50',
-    rootBgLight: 'bg-sky-50 text-slate-900',
-    cardBgDark: 'bg-slate-900 border-slate-800',
-    cardBgLight: 'bg-white border-sky-200',
+    accent: 'text-[#00d1ff]', // Cyan néon du jeu
+    accentDarker: 'text-[#0088aa]',
+    bgPrimary: 'bg-[#ff5f5f]', // Rouge "Sushi/Thon" pour les actions principales
+    bgPrimaryHover: 'hover:bg-[#ff7a7a]',
+    borderAccent: 'border-[#00d1ff]',
+    shadowAccent: 'shadow-none',
+
+    // États cochés
+    checkedBgDark: 'bg-[#29366f] border-4 border-[#00d1ff] text-[#00d1ff]',
+    checkedBgLight: 'bg-[#ffd9a2] border-4 border-[#8b4513] text-[#5d2e0a]', // Style bois/tampon
+
+    // Backgrounds (Sombre = Blue Hole / Clair = Bancho Sushi)
+    rootBgDark: 'bg-[#1a1c2c] text-[#f4f4f4]', // Bleu abyssal
+    rootBgLight: 'bg-[#fcf5e5] text-[#3c2a21]', // Beige parchemin / Papier de riz
+
+    // Cards
+    cardBgDark: 'bg-[#29366f] border-4 border-black', // Panneau métal/sous-marin
+    cardBgLight: 'bg-[#fffdfa] border-4 border-[#3c2a21] shadow-[8px_8px_0px_0px_rgba(60,42,33,0.1)]', // Panneau bois/menu
   }
 };
 
@@ -63,7 +70,7 @@ export const cyberTheme: ThemePlugin = {
   icon: Zap,
   properties: {
     font: 'font-mono',
-    radius: 'rounded-none', // Pas d'arrondis
+    radius: 'rounded-none',
     buttonStyle: 'border border-pink-500 hover:shadow-[0_0_15px_rgba(236,72,153,0.6)] active:bg-pink-500/20',
   },
   colors: {

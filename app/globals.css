@@ -20,6 +20,12 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Custom Font Classes */
+.font-pixel {
+  font-family: var(--font-pixel), monospace;
+  letter-spacing: 0.5px;
+}
+
 /* --- Animations Personnalisées ThermoMind --- */
 @keyframes spin-slow {
   from { transform: rotate(0deg); }

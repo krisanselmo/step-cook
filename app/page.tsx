@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Play, Pause, RotateCcw, RotateCw, Home as HomeIcon, ChevronRight, ChevronLeft, Scale,
   Wheat, Zap, Sun, Moon, Sparkles, X, Search, Loader2,
-  ArrowDownAZ, Calendar, ExternalLink, Check, Palette
+  ArrowDownAZ, Calendar, ExternalLink, Check, Palette, ChevronDown, Camera, UploadCloud
 } from 'lucide-react';
 
 import { Ingredient, StepParams, Recipe, ModalData, MealieRecipeSummary, MealieRecipeDetail, ThemePlugin } from './lib/types';
@@ -43,6 +43,74 @@ const Button: React.FC<ButtonProps> = ({ children, onClick, className = "", vari
   );
 };
 
+// --- COMPOSANT DROPDOWN THÈME ---
+interface ThemeDropdownProps {
+  currentTheme: ThemePlugin;
+  setThemeId: (id: string) => void;
+  isDarkMode: boolean;
+}
+
+const ThemeDropdown: React.FC<ThemeDropdownProps> = ({ currentTheme, setThemeId, isDarkMode }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const t = (darkClass: string, lightClass: string) => isDarkMode ? darkClass : lightClass;
+
+  const ThemeIcon = currentTheme.icon;
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center gap-2 px-3 py-2 transition-all ${currentTheme.properties.radius} ${
+          t('bg-gray-800 text-gray-200 hover:bg-gray-700 border-gray-700', 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200')
+        } border shadow-sm`}
+        title="Changer de thème"
+      >
+        <ThemeIcon size={18} className={currentTheme.colors.accent} />
+        <span className="text-xs font-bold hidden sm:inline-block">{currentTheme.name}</span>
+        <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className={`absolute right-0 top-full mt-2 w-48 z-50 overflow-hidden shadow-xl border ${currentTheme.properties.radius} ${t('bg-gray-900 border-gray-700', 'bg-white border-gray-200')}`}>
+          <div className="p-1 flex flex-col gap-1">
+            {THEMES.map((theme) => {
+              const Icon = theme.icon;
+              const isActive = currentTheme.id === theme.id;
+              return (
+                <button
+                  key={theme.id}
+                  onClick={() => { setThemeId(theme.id); setIsOpen(false); }}
+                  className={`flex items-center gap-3 w-full px-3 py-2 text-left text-sm transition-colors ${currentTheme.properties.radius} ${
+                    isActive
+                      ? t('bg-gray-800 text-white', 'bg-gray-100 text-gray-900')
+                      : t('text-gray-400 hover:bg-gray-800 hover:text-gray-200', 'text-gray-600 hover:bg-gray-50 hover:text-gray-900')
+                  }`}
+                >
+                  <Icon size={16} className={isActive ? theme.colors.accent : ''} />
+                  <span>{theme.name}</span>
+                  {isActive && <Check size={14} className="ml-auto opacity-50" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- COMPOSANT PRINCIPAL ---
 
 export default function Home() {
@@ -66,8 +134,17 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortOption, setSortOption] = useState<SortOption>('date');
 
+  // Modals
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [modalData, setModalData] = useState<ModalData>({ ingredient: '', suggestion: '', loading: false });
+
+  // Cooked Modal State
+  const [cookedModalOpen, setCookedModalOpen] = useState<boolean>(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadSuccess, setUploadSuccess] = useState<boolean>(false);
+
   const [stepParams, setStepParams] = useState<StepParams>({ time: '--:--', temp: '---', speed: '---', seconds: 0, reverse: false });
   const [stepIngredients, setStepIngredients] = useState<Ingredient[]>([]);
 
@@ -75,14 +152,9 @@ export default function Home() {
   const [isGeminiMode, setIsGeminiMode] = useState<boolean>(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const t = (darkClass: string, lightClass: string) => isDarkMode ? darkClass : lightClass;
-
-  const toggleTheme = () => {
-    const currentIndex = THEMES.findIndex(t => t.id === activeThemeId);
-    const nextIndex = (currentIndex + 1) % THEMES.length;
-    setActiveThemeId(THEMES[nextIndex].id);
-  };
 
   const filteredRecipes = useMemo(() => {
     let result = [...mealieRecipes];
@@ -104,6 +176,13 @@ export default function Home() {
     fetchMealieRecipes();
     return () => clearInterval(interval);
   }, []);
+
+  // Cleanup preview URL
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   const fetchMealieRecipes = async () => {
     setIsMealieLoading(true);
@@ -204,6 +283,7 @@ export default function Home() {
     }, 800);
   };
 
+  // --- Handlers IA ---
   const openGeminiModal = async (ingredientFullText: string) => {
     setModalOpen(true);
     setModalData({ ingredient: ingredientFullText, suggestion: '', loading: true });
@@ -236,6 +316,53 @@ export default function Home() {
     }
   };
 
+  // --- Handlers Upload Photo ---
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!recipe?.slug) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    if (selectedImage) {
+      formData.append('image', selectedImage);
+    }
+    formData.append('slug', recipe.slug);
+
+    try {
+      // On appelle toujours l'API, c'est elle qui gérera si l'image est absente (retour succès immédiat)
+      const res = await fetch('/api/mealie/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.details || 'Erreur inconnue');
+      }
+
+      setUploadSuccess(true);
+      setTimeout(() => {
+        setCookedModalOpen(false);
+        setUploadSuccess(false);
+        setSelectedImage(null);
+        setPreviewUrl(null);
+      }, 2000);
+    } catch (error) {
+      console.error("Erreur upload:", error);
+      alert("Erreur lors de l'envoi : " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // --- Vues ---
 
   const ThemeIcon = theme.icon;
@@ -243,14 +370,9 @@ export default function Home() {
   if (view === 'input') {
     return (
       <div className={`min-h-screen ${theme.properties.font} flex flex-col items-center justify-center p-4 transition-colors duration-300 ${t(theme.colors.rootBgDark, theme.colors.rootBgLight)}`}>
-        <div className="absolute top-4 right-4 z-10 flex gap-2">
-          <button
-            onClick={toggleTheme}
-            className={`p-2 rounded-full transition-colors flex items-center justify-center ${t('bg-gray-800 text-gray-400 hover:text-white', 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200 shadow-sm')}`}
-            title={`Changer de thème (Actuel: ${theme.name})`}
-          >
-            <Palette size={20} />
-          </button>
+        <div className="absolute top-4 right-4 z-10 flex gap-2 items-center">
+          <ThemeDropdown currentTheme={theme} setThemeId={setActiveThemeId} isDarkMode={isDarkMode} />
+
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className={`p-2 rounded-full transition-colors ${t('bg-gray-800 text-gray-400 hover:text-white', 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200 shadow-sm')}`}
@@ -387,9 +509,7 @@ export default function Home() {
         <button onClick={() => setView('input')} className={`transition-colors ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}><HomeIcon size={20} /></button>
         <span className={`text-xs font-bold uppercase tracking-wider truncate px-4 ${t('text-gray-500', 'text-gray-500')}`}>{recipe.title}</span>
         <div className="flex items-center gap-3">
-          <button onClick={toggleTheme} className={`transition-colors ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`} title="Changer de thème">
-            <Palette size={16} />
-          </button>
+          <ThemeDropdown currentTheme={theme} setThemeId={setActiveThemeId} isDarkMode={isDarkMode} />
           {recipe.slug && (
             <button
               onClick={openMealiePage}
@@ -437,7 +557,7 @@ export default function Home() {
                         <Sparkles size={16} className="text-purple-500" />
                       </div>
                     ) : (
-                      <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      <div className={`w-6 h-6 border-2 flex items-center justify-center shrink-0 transition-colors ${theme.properties.radius} ${
                         isChecked ? `${theme.colors.bgPrimary} ${theme.colors.borderAccent} text-white` : t('border-gray-600', 'border-gray-300')
                       }`}>
                         {isChecked && <Check size={14} strokeWidth={3} />}
@@ -458,7 +578,16 @@ export default function Home() {
               <ThemeIcon size={48} />
             </div>
             <h2 className="text-4xl font-bold text-center">Recette<br/>Terminée !</h2>
-            <Button onClick={() => setView('input')} variant="secondary" className="px-8" theme={theme}>Autre Recette</Button>
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <Button onClick={() => setView('input')} variant="secondary" className="px-8" theme={theme}>
+                Autre Recette
+              </Button>
+              {recipe.slug && (
+                <Button onClick={() => setCookedModalOpen(true)} className="px-8" theme={theme}>
+                  Je l'ai cuisiné ! <Camera size={18} />
+                </Button>
+              )}
+            </div>
           </div>
         ) : (
           <>
@@ -553,6 +682,76 @@ export default function Home() {
                     <div><p className={`text-xs uppercase font-bold tracking-wider mb-1 ${t('text-gray-500', 'text-gray-400')}`}>Ingrédient</p><p className="text-xl font-medium">{modalData.ingredient}</p></div>
                     <div className={`p-4 rounded-xl ${t('bg-gray-800/50', 'bg-gray-50')}`}><p className={`text-xs uppercase font-bold tracking-wider mb-2 ${t('text-purple-400', 'text-purple-600')}`}>Suggestion de remplacement</p><p className="text-sm leading-relaxed">{modalData.suggestion}</p></div>
                   </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal "Je l'ai cuisiné" (Upload) */}
+        {cookedModalOpen && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
+            <div className={`w-full max-w-sm p-6 ${theme.properties.radius} shadow-2xl relative flex flex-col ${t('bg-gray-900 border border-gray-700 text-white', 'bg-white border border-gray-200 text-gray-900')}`}>
+              <button onClick={() => {setCookedModalOpen(false); setSelectedImage(null); setPreviewUrl(null);}} className={`absolute top-4 right-4 p-2 rounded-full ${t('hover:bg-gray-800', 'hover:bg-gray-100')}`}><X size={20} /></button>
+
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold mb-2">Bravo ! 🎉</h3>
+                <p className={`text-sm ${t('text-gray-400', 'text-gray-500')}`}>Immortalisez votre chef-d'œuvre pour Mealie.</p>
+              </div>
+
+              <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                {uploadSuccess ? (
+                  <div className="flex flex-col items-center animate-in zoom-in text-green-500">
+                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
+                      <Check size={32} />
+                    </div>
+                    <span className="font-bold">Image envoyée !</span>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                    />
+
+                    {previewUrl ? (
+                      <div className="relative w-full aspect-square bg-black/50 rounded-lg overflow-hidden border border-gray-700">
+                        <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                        <button
+                          onClick={() => {setSelectedImage(null); setPreviewUrl(null);}}
+                          className="absolute top-2 right-2 p-1 bg-black/60 rounded-full text-white hover:bg-red-500 transition-colors"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`w-full aspect-[4/3] border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors ${t('border-gray-700 hover:border-gray-500 hover:bg-gray-800/50', 'border-gray-300 hover:border-gray-400 hover:bg-gray-50')}`}
+                      >
+                        <Camera size={48} className="opacity-50" />
+                        <span className="text-sm font-medium opacity-70">Ajouter une photo (optionnel)</span>
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={handleUpload}
+                      className="w-full mt-4"
+                      theme={theme}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? (
+                        <><Loader2 className="animate-spin" /> Traitement...</>
+                      ) : selectedImage ? (
+                        <><UploadCloud size={18} /> Envoyer la photo</>
+                      ) : (
+                        <><Check size={18} /> Valider sans photo</>
+                      )}
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
