@@ -5,7 +5,7 @@ import {
   Play, Pause, RotateCcw, RotateCw, ChefHat,
   Home as HomeIcon, ChevronRight, ChevronLeft, Scale,
   Wheat, Zap, Sun, Moon, Sparkles, X, Search, Loader2,
-  ArrowDownAZ, Calendar, ExternalLink
+  ArrowDownAZ, Calendar, ExternalLink, Check
 } from 'lucide-react';
 
 // --- TYPES & INTERFACES ---
@@ -233,11 +233,15 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortOption, setSortOption] = useState<SortOption>('date'); // 'date' ou 'alpha'
 
-  // AI & Params State
+  // AI, Params & Ingredients State
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [modalData, setModalData] = useState<ModalData>({ ingredient: '', suggestion: '', loading: false });
   const [stepParams, setStepParams] = useState<StepParams>({ time: '--:--', temp: '---', speed: '---', seconds: 0, reverse: false });
   const [stepIngredients, setStepIngredients] = useState<Ingredient[]>([]);
+
+  // Nouveaux états pour l'interaction des ingrédients
+  const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(new Set());
+  const [isGeminiMode, setIsGeminiMode] = useState<boolean>(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -247,7 +251,6 @@ export default function Home() {
   const filteredRecipes = useMemo(() => {
     let result = [...mealieRecipes];
 
-    // 1. Filtrage
     if (searchTerm.trim()) {
       const lowerTerm = searchTerm.toLowerCase();
       result = result.filter(r =>
@@ -256,15 +259,10 @@ export default function Home() {
       );
     }
 
-    // 2. Tri
     result.sort((a, b) => {
       if (sortOption === 'alpha') {
         return a.name.localeCompare(b.name);
       } else {
-        // Date par défaut (si disponible, sinon fallback sur nom)
-        // Mealie ne renvoie pas toujours dateAdded dans le résumé simple selon version,
-        // mais l'API de liste est triée par défaut. Ici on refait le tri client.
-        // Si pas de date, on garde l'ordre.
         return 0;
       }
     });
@@ -315,6 +313,7 @@ export default function Home() {
 
       setTimeout(() => {
         setRecipe(parseRecipe(formattedText, slug));
+        setCheckedIngredients(new Set()); // Réinitialiser les checkboxes
         setCurrentStep(-1);
         setView('cooking');
       }, 500);
@@ -322,23 +321,17 @@ export default function Home() {
     } catch (err) {
       console.error(err);
       setView('input');
-      // Afficher l'erreur à l'utilisateur de manière simple
       alert("Erreur lors du chargement : " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
   const openMealiePage = () => {
     if (recipe && recipe.slug) {
-      // En Next.js, on ne peut pas accéder directement à process.env.MEALIE_BASE_URL côté client
-      // si elle n'est pas préfixée par NEXT_PUBLIC_.
-      // On va supposer ici l'URL par défaut que vous m'avez donnée, ou idéalement
-      // vous devriez ajouter NEXT_PUBLIC_MEALIE_BASE_URL dans .env.local
       const baseUrl = "https://mealie.christopheanselmo.org/g/home";
       window.open(`${baseUrl}/r/${recipe.slug}`, '_blank');
     }
   };
 
-  // --- (LOGIQUE TIMER & PARSING RESTÉE IDENTIQUE) ---
   useEffect(() => {
     if (recipe && currentStep >= 0 && currentStep < recipe.steps.length) {
       const stepText = recipe.steps[currentStep];
@@ -384,12 +377,13 @@ export default function Home() {
     setView('processing');
     setTimeout(() => {
       setRecipe(parseRecipe(rawText));
+      setCheckedIngredients(new Set()); // Réinitialiser les checkboxes
       setCurrentStep(-1);
       setView('cooking');
     }, 800);
   };
 
-  const handleIngredientClick = async (ingredientFullText: string) => {
+  const openGeminiModal = async (ingredientFullText: string) => {
     setModalOpen(true);
     setModalData({ ingredient: ingredientFullText, suggestion: '', loading: true });
 
@@ -404,6 +398,20 @@ export default function Home() {
     } catch (error) {
       console.error(error);
       setModalData({ ingredient: ingredientFullText, suggestion: "Erreur IA.", loading: false });
+    }
+  };
+
+  const handleIngredientAction = (ingredientFullText: string) => {
+    if (isGeminiMode) {
+      openGeminiModal(ingredientFullText);
+    } else {
+      const newChecked = new Set(checkedIngredients);
+      if (newChecked.has(ingredientFullText)) {
+        newChecked.delete(ingredientFullText);
+      } else {
+        newChecked.add(ingredientFullText);
+      }
+      setCheckedIngredients(newChecked);
     }
   };
 
@@ -431,7 +439,6 @@ export default function Home() {
             {/* Colonne Gauche: Liste Mealie */}
             <div className={`flex flex-col rounded-3xl border shadow-xl overflow-hidden ${t('bg-gray-900 border-gray-800', 'bg-white border-gray-200')}`}>
 
-              {/* Header avec Recherche et Filtres */}
               <div className={`p-4 border-b flex flex-col gap-3 ${t('border-gray-800', 'border-gray-100')}`}>
                 <div className="flex items-center justify-between">
                   <h2 className="font-bold flex items-center gap-2"><Search size={16}/> Recettes ({filteredRecipes.length})</h2>
@@ -559,6 +566,14 @@ export default function Home() {
               <ExternalLink size={16} />
             </button>
           )}
+          {/* Toggles */}
+          <button
+            onClick={() => setIsGeminiMode(!isGeminiMode)}
+            className={`transition-colors ${isGeminiMode ? 'text-purple-500' : t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}
+            title="Assistant IA Gemini"
+          >
+            <Sparkles size={16} />
+          </button>
           <button onClick={() => setIsDarkMode(!isDarkMode)} className={`transition-colors ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}>
             {isDarkMode ? <Moon size={16} /> : <Sun size={16} />}
           </button>
@@ -572,13 +587,35 @@ export default function Home() {
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             <h2 className="text-2xl font-bold text-green-500">Ingrédients</h2>
             <div className="space-y-3">
-              {recipe.ingredients.map((ing, i) => (
-                <button key={i} onClick={() => handleIngredientClick(ing.fullText)} className={`flex w-full items-center gap-4 text-left p-2 rounded-lg transition-colors ${t('text-gray-300 hover:bg-gray-900', 'text-gray-700 hover:bg-white')}`}>
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0"/>
-                  <span className="text-lg leading-snug">{ing.fullText}</span>
-                  <Sparkles size={14} className="ml-auto opacity-0 group-hover:opacity-50 text-green-500" />
-                </button>
-              ))}
+              {recipe.ingredients.map((ing, i) => {
+                const isChecked = checkedIngredients.has(ing.fullText);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleIngredientAction(ing.fullText)}
+                    className={`flex w-full items-center gap-4 text-left p-3 rounded-xl transition-all ${
+                      isChecked && !isGeminiMode
+                        ? t('bg-gray-900/40 text-gray-500', 'bg-gray-100 text-gray-400 line-through')
+                        : t('text-gray-300 hover:bg-gray-900', 'text-gray-700 hover:bg-white border border-transparent hover:border-gray-200 hover:shadow-sm')
+                    }`}
+                  >
+                    {isGeminiMode ? (
+                      <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
+                        <Sparkles size={16} className="text-purple-500" />
+                      </div>
+                    ) : (
+                      <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                        isChecked ? 'bg-green-500 border-green-500 text-white' : t('border-gray-600', 'border-gray-300')
+                      }`}>
+                        {isChecked && <Check size={14} strokeWidth={3} />}
+                      </div>
+                    )}
+                    <span className={`text-lg leading-snug transition-all ${isChecked && !isGeminiMode ? 'line-through opacity-60' : ''}`}>
+                      {ing.fullText}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
             <div className="h-20"/>
           </div>
@@ -620,14 +657,35 @@ export default function Home() {
                 <span className="text-green-600 font-bold text-xs uppercase tracking-widest">Étape {currentStep + 1}</span>
               </div>
               <p className="text-2xl md:text-4xl font-medium leading-normal max-w-lg mx-auto transition-colors">{recipe.steps[currentStep]}</p>
+
+              {/* Step Ingredients List */}
               {stepIngredients.length > 0 && (
                 <div className="flex flex-wrap justify-center gap-2 mt-8 opacity-90">
-                  {stepIngredients.map((ing, i) => (
-                    <button key={i} onClick={() => handleIngredientClick(ing.fullText)} className={`px-4 py-2 rounded-xl flex items-center gap-2 border transition-all hover:scale-105 active:scale-95 ${t('bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700', 'bg-white border-gray-200 text-gray-700 shadow-sm hover:bg-gray-50')}`}>
-                      <Scale size={14} className="text-green-500"/>
-                      <span className="text-sm font-medium">{ing.fullText}</span>
-                    </button>
-                  ))}
+                  {stepIngredients.map((ing, i) => {
+                    const isChecked = checkedIngredients.has(ing.fullText);
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleIngredientAction(ing.fullText)}
+                        className={`px-4 py-2 rounded-xl flex items-center gap-2 border transition-all hover:scale-105 active:scale-95 ${
+                          isGeminiMode
+                            ? t('bg-purple-900/20 border-purple-500/30 text-purple-300', 'bg-purple-50 border-purple-200 text-purple-700')
+                            : isChecked
+                              ? t('bg-green-900/20 border-green-500/30 text-green-400 opacity-60', 'bg-green-50 border-green-200 text-green-700 opacity-60 line-through')
+                              : t('bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700', 'bg-white border-gray-200 text-gray-700 shadow-sm hover:bg-gray-50')
+                        }`}
+                      >
+                        {isGeminiMode ? (
+                          <Sparkles size={14} className="text-purple-500"/>
+                        ) : isChecked ? (
+                          <Check size={14} className="text-green-500" strokeWidth={3}/>
+                        ) : (
+                          <Scale size={14} className="text-gray-400"/>
+                        )}
+                        <span className="text-sm font-medium">{ing.fullText}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               <div className="h-24"/>
