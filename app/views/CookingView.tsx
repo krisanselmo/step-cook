@@ -226,7 +226,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
               <div className={`rounded-full px-4 py-1.5 mb-6 inline-flex items-center gap-2 border ${t('bg-gray-900/50 border-gray-800', 'bg-gray-100 border-gray-200')}`}>
                 <span className={`${theme.colors.accentDarker} font-bold text-xs uppercase tracking-widest`}>Étape {currentStep + 1}</span>
               </div>
-              <p className="text-2xl md:text-4xl font-medium leading-normal max-w-lg mx-auto transition-colors">{recipe.steps[currentStep]}</p>
+              <p className={`font-medium leading-normal mx-auto transition-colors ${recipe.steps[currentStep].length > 150 ? 'text-l md:text-2xl' : 'text-2xl md:text-4xl'}`}>{recipe.steps[currentStep]}</p>
 
               {/* Step Ingredients List */}
               {stepIngredients.length > 0 && (
