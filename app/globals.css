@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+#root, body, html {
+  max-width: 1280px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+@keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes spin-slow-reverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-10deg); }
+  50% { transform: rotate(10deg); }
+}
+
+.animate-spin-slow { animation: spin-slow 3s linear infinite; }
+.animate-spin-slow-reverse { animation: spin-slow-reverse 3s linear infinite; }
+.animate-wiggle { animation: wiggle 0.5s ease-in-out infinite; }
+
+/* Cacher les barres de défilement (Scrollbar hide) */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
