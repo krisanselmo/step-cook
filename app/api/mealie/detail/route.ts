@@ -34,14 +34,17 @@ export async function GET(request: Request) {
       if (response.status === 404) {
         return NextResponse.json({ error: "Recette introuvable sur Mealie" }, { status: 404 });
       }
+
       throw new Error(`Erreur Mealie: ${response.status}`);
     }
 
     try {
       const data = JSON.parse(responseText);
+
       return NextResponse.json(data);
-    } catch (jsonError) {
+    } catch {
       console.error("[Mealie Detail] JSON Parse Error. Content:", responseText.slice(0, 200));
+
       throw new Error("Réponse invalide (HTML reçu au lieu de JSON)");
     }
 

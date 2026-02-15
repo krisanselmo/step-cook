@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  Home as HomeIcon, ChevronRight, Search, Loader2, ArrowDownAZ, Calendar, X, Sun, Moon, Sparkles, ExternalLink, Check, Play, Pause, RotateCcw, RotateCw, Scale, Wheat, Zap, Camera, UploadCloud
+  ChevronRight, Search, Loader2, ArrowDownAZ, Calendar, X, Sun, Moon, Sparkles
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/Button';
 import { ThemeDropdown } from '@/app/components/ui/ThemeDropdown';
@@ -34,7 +34,6 @@ export const InputView: React.FC<InputViewProps> = ({
   rawText,
   setRawText,
   handleProcess,
-  mealieRecipes,
   isMealieLoading,
   mealieError,
   searchTerm,

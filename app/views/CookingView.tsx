@@ -3,8 +3,8 @@
 import React from 'react';
 import {
   Play, Pause, RotateCcw, RotateCw, Home as HomeIcon, ChevronRight, ChevronLeft, Scale,
-  Wheat, Zap, Sun, Moon, Sparkles, X, Search, Loader2,
-  ArrowDownAZ, Calendar, ExternalLink, Check, Palette, ChevronDown, Camera, UploadCloud
+  Wheat, Zap, Sun, Moon, Sparkles, X, Loader2,
+ ExternalLink, Check, Camera, UploadCloud
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/Button';
 import { ThemeDropdown } from '@/app/components/ui/ThemeDropdown';
@@ -56,13 +56,11 @@ interface CookingViewProps {
 }
 
 export const CookingView: React.FC<CookingViewProps> = ({
-  view,
   setView,
   recipe,
   currentStep,
   setCurrentStep,
   timer,
-  setTimer,
   isTimerRunning,
   setIsTimerRunning,
   currentTime,
@@ -73,7 +71,6 @@ export const CookingView: React.FC<CookingViewProps> = ({
   modalOpen,
   setModalOpen,
   modalData,
-  setModalData,
   cookedModalOpen,
   setCookedModalOpen,
   selectedImage,
@@ -81,20 +78,16 @@ export const CookingView: React.FC<CookingViewProps> = ({
   previewUrl,
   setPreviewUrl,
   isUploading,
-  setIsUploading,
   uploadSuccess,
-  setUploadSuccess,
   stepParams,
   stepIngredients,
   checkedIngredients,
-  setCheckedIngredients,
   isGeminiMode,
   setIsGeminiMode,
   fileInputRef,
   t,
   openMealiePage,
   formatTime,
-  openGeminiModal,
   handleIngredientAction,
   handleFileChange,
   handleUpload,
