@@ -38,7 +38,7 @@ export async function GET() {
       const data = JSON.parse(responseText);
       // On retourne items si paginé, ou la réponse directe
       return NextResponse.json(data.items || data);
-    } catch (jsonError) {
+    } catch {
       console.error("[Mealie Proxy] JSON Parse Error. Received content start:", responseText.slice(0, 200));
       throw new Error("Réponse invalide (HTML reçu au lieu de JSON)");
     }

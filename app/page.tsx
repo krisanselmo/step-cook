@@ -22,7 +22,6 @@ export default function Home() {
     currentTime,
     isDarkMode,
     setIsDarkMode,
-    activeThemeId,
     setActiveThemeId,
     theme,
     mealieRecipes,

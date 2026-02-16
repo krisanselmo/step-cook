@@ -101,7 +101,7 @@ export const parseRecipe = (input: string, slug?: string): Recipe => {
         };
       }
     }
-  } catch (e) {
+  } catch {
     console.log("Input is not valid JSON, falling back to text parsing.");
   }
 

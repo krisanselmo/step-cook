@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, message: "Cuisiné ! Ajouté à la timeline." });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Mealie Upload] Critical Error:", error);
     return NextResponse.json({
       error: "Échec du traitement de la requête",

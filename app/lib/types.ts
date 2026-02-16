@@ -1,4 +1,5 @@
-// Interfaces Métier
+import React from 'react';
+
 export interface Ingredient {
   fullText: string;
   keywords: string[];
@@ -25,7 +26,6 @@ export interface ModalData {
   loading: boolean;
 }
 
-// Interfaces Mealie (API)
 export interface MealieRecipeSummary {
   id: string;
   slug: string;
@@ -54,12 +54,11 @@ export interface MealieRecipeDetail {
   recipeInstructions: MealieInstruction[];
 }
 
-// Interfaces UI & Thèmes
 export interface ThemePlugin {
   id: string;
   name: string;
   title: string;
-  icon: any; // React.ElementType
+  icon: React.ElementType;
   properties: {
     font: string; // font-sans, font-mono, font-serif
     radius: string; // rounded-xl, rounded-md, rounded-none
