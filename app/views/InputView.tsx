@@ -6,27 +6,27 @@ import {
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/Button';
 import { ThemeDropdown } from '@/app/components/ui/ThemeDropdown';
-import { UseCookingState, SortOption } from '@/app/hooks/useCookingState'; // Assuming UseCookingState is exported
+import { SortOption, useCookingState } from '@/app/hooks/useCookingState';
 
 interface InputViewProps {
   rawText: string;
   setRawText: (text: string) => void;
   handleProcess: () => void;
-  mealieRecipes: UseCookingState['mealieRecipes'];
-  isMealieLoading: UseCookingState['isMealieLoading'];
-  mealieError: UseCookingState['mealieError'];
-  searchTerm: UseCookingState['searchTerm'];
-  setSearchTerm: UseCookingState['setSearchTerm'];
-  sortOption: UseCookingState['sortOption'];
+  mealieRecipes: ReturnType<typeof useCookingState>['mealieRecipes'];
+  isMealieLoading: ReturnType<typeof useCookingState>['isMealieLoading'];
+  mealieError: ReturnType<typeof useCookingState>['mealieError'];
+  searchTerm: ReturnType<typeof useCookingState>['searchTerm'];
+  setSearchTerm: ReturnType<typeof useCookingState>['setSearchTerm'];
+  sortOption: ReturnType<typeof useCookingState>['sortOption'];
   setSortOption: (option: SortOption) => void;
-  filteredRecipes: UseCookingState['filteredRecipes'];
-  fetchMealieRecipes: UseCookingState['fetchMealieRecipes'];
-  loadMealieRecipe: UseCookingState['loadMealieRecipe'];
-  isDarkMode: UseCookingState['isDarkMode'];
-  setIsDarkMode: UseCookingState['setIsDarkMode'];
-  theme: UseCookingState['theme'];
-  setActiveThemeId: UseCookingState['setActiveThemeId'];
-  t: UseCookingState['t'];
+  filteredRecipes: ReturnType<typeof useCookingState>['filteredRecipes'];
+  fetchMealieRecipes: ReturnType<typeof useCookingState>['fetchMealieRecipes'];
+  loadMealieRecipe: ReturnType<typeof useCookingState>['loadMealieRecipe'];
+  isDarkMode: ReturnType<typeof useCookingState>['isDarkMode'];
+  setIsDarkMode: ReturnType<typeof useCookingState>['setIsDarkMode'];
+  theme: ReturnType<typeof useCookingState>['theme'];
+  setActiveThemeId: ReturnType<typeof useCookingState>['setActiveThemeId'];
+  t: ReturnType<typeof useCookingState>['t'];
   handleGeminiGenerate: (prompt: string) => void;
 }
 

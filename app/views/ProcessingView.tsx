@@ -2,11 +2,11 @@
 
 import React from 'react';
 import { RotateCcw } from 'lucide-react';
-import { UseCookingState } from '@/app/hooks/useCookingState'; // Assuming UseCookingState is exported
+import { useCookingState } from '@/app/hooks/useCookingState';
 
 interface ProcessingViewProps {
-  theme: UseCookingState['theme'];
-  t: UseCookingState['t'];
+  theme: ReturnType<typeof useCookingState>['theme'];
+  t: ReturnType<typeof useCookingState>['t'];
 }
 
 export const ProcessingView: React.FC<ProcessingViewProps> = ({ theme, t }) => {
