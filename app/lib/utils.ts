@@ -1,37 +1,79 @@
 import { Ingredient, StepParams, Recipe, MealieRecipeDetail } from './types';
+import { distance } from 'fastest-levenshtein';
+
+const normalizeText = (text: string): string => {
+  return text
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
+  .replace(/œ/g, 'oe')
+  .replace(/æ/g, 'ae');
+};
+
+export const isKeywordInText = (keyword: string, text: string): boolean => {
+  const normKeyword = normalizeText(keyword);
+  const normText = normalizeText(text);
+
+  // On sépare le texte de l'étape en mots individuels (en ignorant la ponctuation)
+  const words = normText.split(/[\s,.;:!?\(\)'"’\-]+/);
+
+  for (const word of words) {
+    // On ignore les petits mots du texte pour éviter le bruit
+    if (word.length < 3 && normKeyword.length >= 3) continue;
+
+    // Correspondance exacte
+    if (word === normKeyword) return true;
+
+    // Tolérance dynamique basée sur la taille du mot-clé
+    let allowedDistance = 0;
+    if (normKeyword.length > 5) {
+      allowedDistance = 2; // Grands mots : 2 erreurs max
+    } else if (normKeyword.length > 3) {
+      allowedDistance = 1; // Mots moyens : 1 erreur max
+    }
+
+    // Si on est dans la tolérance de Levenshtein avec fastest-levenshtein
+    if (distance(normKeyword, word) <= allowedDistance) {
+      return true;
+    }
+
+    // Cas spécial pour les pluriels des très petits mots
+    if (normKeyword.length <= 3) {
+      if (word === normKeyword + 's' || word === normKeyword + 'x') return true;
+    }
+
+    // Détection des préfixes pour les mots longs
+    if (normKeyword.length >= 4) {
+      if ((word.startsWith(normKeyword) || normKeyword.startsWith(word)) && Math.abs(word.length - normKeyword.length) <= 2) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
 
 export const parseIngredientLine = (line: string): Ingredient => {
   const cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
-  const stopWords = [
-    'de',
-    "d'",
-    'du',
-    'des',
-    'le',
-    'la',
-    'les',
-    'un',
-    'une',
-    'en',
-    'à',
-    'au',
-    'aux',
-    'et',
-    'ou',
-    'g',
-    'kg',
-    'mg',
-    'l',
-    'cl',
-    'ml',
-  ];
+  const stopWords = new Set([
+    // Articles & Prépositions
+    'de', 'd', 'du', 'des', 'le', 'la', 'les', 'un', 'une', 'en', 'a', 'au', 'aux', 'et', 'ou', 'pour', 'avec', 'sans',
+    // Unités courtes
+    'g', 'kg', 'mg', 'l', 'cl', 'ml', 'dl', 'c', 'cs', 'cc', 'cas', 'cac',
+    // Unités longues
+    'gramme', 'grammes', 'kilo', 'kilos', 'litre', 'litres', 'cuillere', 'cuilleres', 'pincee', 'pincees', 'poignee', 'poignees', 'verre', 'verres', 'tasse', 'tasses', 'bol', 'bols', 'gousse', 'gousses', 'tranche', 'tranches', 'morceau', 'morceaux', 'sachet', 'sachets', 'boite', 'boites', 'paquet', 'paquets', 'filet', 'filets', 'zeste', 'zestes', 'brin', 'brins', 'feuille', 'feuilles', 'branche', 'branches', 'botte', 'bottes', 'cafe', 'soupe',
+    // Adjectifs & Modificateurs courants
+    'facultatif', 'optionnel', 'environ', 'quelques', 'frais', 'fraiche', 'gros', 'grosse', 'petit', 'petite', 'moyen', 'moyenne', 'hache', 'hachee', 'coupe', 'coupee', 'entier', 'entiere', 'battu', 'battue', 'moulu', 'moulue', 'rape', 'rapee', 'bien', 'tres', 'peu', 'plus', 'moins', 'selon', 'gout',
+  ]);
 
   const tokens = cleanLine
-    .toLowerCase()
-    .replace(/[0-9,.\(\)]+/g, ' ')
-    .split(/[\s']+/)
-    .filter(w => w.length > 2)
-    .filter(w => !stopWords.includes(w));
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '') // On enlève les accents pour faciliter le filtrage
+  .replace(/[0-9,.\(\)]+/g, ' ')
+  .split(/[\s']+/)
+  .filter(w => w.length > 2)
+  .filter(w => !stopWords.has(w));
 
   return { fullText: cleanLine, keywords: tokens };
 };
@@ -172,7 +214,7 @@ export const parseRecipe = (input: string, slug?: string): Recipe => {
   let currentSection = 'unknown';
 
   const ingredientKeywords = [
-    /^(ingrédient|ingredients|il vous faut|liste):?$/i,
+    /^(ingrédients?|ingredients?|il vous faut|liste):?$/i,
   ];
   const stepKeywords = [
     /^(préparation|étape|instruction|recette|instructions):?$/i,
