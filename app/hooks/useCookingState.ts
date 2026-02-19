@@ -236,8 +236,9 @@ export const useCookingState = (): UseCookingState => {
 
   const openMealiePage = () => {
     if (recipe && recipe.slug) {
-      const baseUrl = 'https://mealie.christopheanselmo.org/g/home';
-      window.open(`${baseUrl}/r/${recipe.slug}`, '_blank');
+      const baseUrl = process.env.NEXT_PUBLIC_MEALIE_BASE_URL;
+
+      window.open(`${baseUrl}/g/home/r/${recipe.slug}`, '_blank');
     }
   };
 
@@ -245,6 +246,7 @@ export const useCookingState = (): UseCookingState => {
     if (recipe && currentStep >= 0 && currentStep < recipe.steps.length) {
       const stepText = recipe.steps[currentStep];
       const params = extractStepParams(stepText);
+
       setStepParams(params);
 
       if (params.seconds > 0) {

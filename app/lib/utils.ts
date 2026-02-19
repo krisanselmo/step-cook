@@ -240,11 +240,11 @@ export const extractStepParams = (text: string): StepParams => {
   } else {
     // Recherche par mot clé
     const speedMatch = text.match(
-      /(vit|vitesse)\.?\s*(\d+(\.\d+)?(\-\d+)?)|mijotage/i,
+      /(vit|vitesse)\.?\s*(\d+(\.\d+)?(\-\d+)?)|mijotage|🥄/i,
     );
 
     if (speedMatch) {
-      speed = speedMatch[0].toLowerCase().includes('mijotage')
+      speed = speedMatch[0].toLowerCase().match(/mijotage|🥄/)
         ? 'MIJOT'
         : speedMatch[2];
     } else {
@@ -259,12 +259,10 @@ export const extractStepParams = (text: string): StepParams => {
       }
     }
   }
-  
-  console.log('text', text);
 
   // 4. Détection du sens inverse
   if (
-    (text.includes('//') || lowerText.match(/sens inverse|inversé|inverse/)) &&
+    (text.includes('//') || lowerText.match(/sens inverse|inversé|inverse|⏪/)) &&
     speed !== 'EPI'
   ) {
     reverse = true;
@@ -275,18 +273,23 @@ export const extractStepParams = (text: string): StepParams => {
 
 // Fonction utilitaire pour nettoyer le texte des étapes (gestion des //)
 const cleanStepText = (line: string): string => {
-  // Si // est suivi d'un chiffre, on remplace par "sens inverse"
-  if (line.match(/\/\/\d/)) {
-    return line.replace(/\/\//g, ' (sens inverse) ');
-  }
-
-  // Si // est à la fin ou seul, on précise le mijotage
-  if (line.includes('//')) {
-    return line.replace(/\/\//g, ' (sens inverse + mijotage) ');
-  }
-
-  return line;
+  return corrigerInstructionsThermomix(line);
 };
+
+function corrigerInstructionsThermomix(texte: string): string {
+  if (!texte) return "";
+
+  // Cas 1 : Remplacement de //vitesse par "sens inverse / vitesse"
+  // On utilise le flag 'g' pour remplacer toutes les occurrences
+  let texteCorrige = texte.replace(/\/\/vitesse\s*([\d.]+)/g, " /⏪/vitesse $1");
+
+  // Cas 2 : Remplacement de // seul (souvent en fin de phrase ou après la température)
+  // On utilise un lookahead négatif (?!...) pour vérifier que ce n'est pas suivi de "vitesse"
+  texteCorrige = texteCorrige.replace(/\/\/(?!\s*vitesse)/g, " /⏪/🥄");
+
+  // Nettoyage des doubles espaces potentiels et espaces en début/fin
+  return texteCorrige.replace(/\s\s+/g, ' ').trim();
+}
 
 export const parseRecipe = (
   input: string,
@@ -307,7 +310,7 @@ export const parseRecipe = (
                 parseIngredientLine(ing),
               )
             : [],
-          steps: jsonRecipe.steps.map((step: string) => cleanStepText(step)),
+          steps: jsonRecipe.steps.map((step: string) => corrigerInstructionsThermomix(step)),
           slug,
           orgURL,
         };

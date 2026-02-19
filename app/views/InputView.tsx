@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   ChevronRight,
   Search,
@@ -10,11 +10,11 @@ import {
   X,
   Sun,
   Moon,
-  Sparkles,
+  Sparkles, Pencil,
 } from 'lucide-react';
-import { Button } from '@/app/components/ui/Button';
-import { ThemeDropdown } from '@/app/components/ui/ThemeDropdown';
-import { SortOption, useCookingState } from '@/app/hooks/useCookingState';
+import {Button} from '@/app/components/ui/Button';
+import {ThemeDropdown} from '@/app/components/ui/ThemeDropdown';
+import {SortOption, useCookingState} from '@/app/hooks/useCookingState';
 
 interface InputViewProps {
   rawText: string;
@@ -39,29 +39,31 @@ interface InputViewProps {
 }
 
 export const InputView: React.FC<InputViewProps> = ({
-  rawText,
-  setRawText,
-  handleProcess,
-  isMealieLoading,
-  mealieError,
-  searchTerm,
-  setSearchTerm,
-  sortOption,
-  setSortOption,
-  filteredRecipes,
-  fetchMealieRecipes,
-  loadMealieRecipe,
-  isDarkMode,
-  setIsDarkMode,
-  theme,
-  setActiveThemeId,
-  t,
-  handleGeminiGenerate,
-}) => {
+                                                      rawText,
+                                                      setRawText,
+                                                      handleProcess,
+                                                      isMealieLoading,
+                                                      mealieError,
+                                                      searchTerm,
+                                                      setSearchTerm,
+                                                      sortOption,
+                                                      setSortOption,
+                                                      filteredRecipes,
+                                                      fetchMealieRecipes,
+                                                      loadMealieRecipe,
+                                                      isDarkMode,
+                                                      setIsDarkMode,
+                                                      theme,
+                                                      setActiveThemeId,
+                                                      t,
+                                                      handleGeminiGenerate,
+                                                    }) => {
   const ThemeIcon = theme.icon;
+
   const [activeTab, setActiveTab] = useState<'mealie' | 'manual' | 'gemini'>(
     'mealie',
   ); // State to control which section is shown on mobile
+
   const [geminiText, setGeminiText] = useState<string>(''); // State for Gemini input
 
   return (
@@ -81,8 +83,9 @@ export const InputView: React.FC<InputViewProps> = ({
           }
           className={`p-2 rounded-full transition-colors ${t('bg-gray-800 text-gray-400 hover:text-white', 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200 shadow-sm')}`}
         >
-          {isDarkMode ? <Moon size={20} /> : <Sun size={20} />}
-        </button>{' '}
+          {isDarkMode ? <Moon size={20}/> : <Sun size={20}/>}
+        </button>
+        {' '}
       </div>
 
       <div className="max-w-5xl w-full flex flex-col h-[90vh] gap-6">
@@ -108,13 +111,14 @@ export const InputView: React.FC<InputViewProps> = ({
               onClick={() => setActiveTab('manual')}
               className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'manual' ? `${theme.colors.bgPrimary} text-white` : t('bg-gray-800 text-gray-300', 'bg-white text-gray-700 hover:bg-gray-50')}`}
             >
-              Manuel
+              <Pencil size={16}/>
+
             </button>
             <button
               onClick={() => setActiveTab('gemini')}
               className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'gemini' ? `${theme.colors.bgPrimary} text-white` : t('bg-gray-800 text-gray-300', 'bg-white text-gray-700 hover:bg-gray-50')}`}
             >
-              Gemini
+              <Sparkles size={16}/>
             </button>
           </div>
         </div>
@@ -129,7 +133,7 @@ export const InputView: React.FC<InputViewProps> = ({
             >
               <div className="flex items-center justify-between">
                 <h2 className="font-bold flex items-center gap-2">
-                  <Search size={16} /> Recettes ({filteredRecipes.length})
+                  <Search size={16}/> Recettes ({filteredRecipes.length})
                 </h2>
                 <button
                   onClick={fetchMealieRecipes}
@@ -143,7 +147,7 @@ export const InputView: React.FC<InputViewProps> = ({
                 <div
                   className={`flex-1 flex items-center px-3 py-2 ${theme.properties.radius} border ${t('bg-black/50 border-gray-700/50', 'bg-gray-50 border-gray-300')}`}
                 >
-                  <Search size={14} className="opacity-50 mr-2" />
+                  <Search size={14} className="opacity-50 mr-2"/>
                   <input
                     type="text"
                     placeholder="Rechercher..."
@@ -153,7 +157,7 @@ export const InputView: React.FC<InputViewProps> = ({
                   />
                   {searchTerm && (
                     <button onClick={() => setSearchTerm('')}>
-                      <X size={14} className="opacity-50" />
+                      <X size={14} className="opacity-50"/>
                     </button>
                   )}
                 </div>
@@ -164,14 +168,14 @@ export const InputView: React.FC<InputViewProps> = ({
                     className={`p-2 ${theme.properties.radius} border transition-colors ${sortOption === 'date' ? `${theme.colors.bgPrimary} ${theme.colors.borderAccent} text-white` : t('border-gray-700/50 hover:bg-gray-800/50', 'border-gray-300 hover:bg-gray-100')}`}
                     title="Trier par date"
                   >
-                    <Calendar size={16} />
+                    <Calendar size={16}/>
                   </button>
                   <button
                     onClick={() => setSortOption('alpha')}
                     className={`p-2 ${theme.properties.radius} border transition-colors ${sortOption === 'alpha' ? `${theme.colors.bgPrimary} ${theme.colors.borderAccent} text-white` : t('border-gray-700/50 hover:bg-gray-800/50', 'border-gray-300 hover:bg-gray-100')}`}
                     title="Trier par nom"
                   >
-                    <ArrowDownAZ size={16} />
+                    <ArrowDownAZ size={16}/>
                   </button>
                 </div>
               </div>
@@ -180,7 +184,7 @@ export const InputView: React.FC<InputViewProps> = ({
             <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
               {isMealieLoading ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-2">
-                  <Loader2 className="animate-spin" />
+                  <Loader2 className="animate-spin"/>
                   <span className="text-xs">Chargement...</span>
                 </div>
               ) : mealieError ? (
@@ -244,7 +248,7 @@ export const InputView: React.FC<InputViewProps> = ({
               disabled={!rawText.trim()}
               theme={theme}
             >
-              Cuisiner <ChevronRight size={18} />
+              Cuisiner <ChevronRight size={18}/>
             </Button>
           </div>
 
@@ -267,7 +271,7 @@ export const InputView: React.FC<InputViewProps> = ({
               disabled={!geminiText.trim()}
               theme={theme}
             >
-              Générer Recette <Sparkles size={18} />
+              Générer Recette <Sparkles size={18}/>
             </Button>
           </div>
         </div>
