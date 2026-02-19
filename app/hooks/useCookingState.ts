@@ -14,7 +14,8 @@ import { defaultTheme, THEMES } from '@/app/lib/themes';
 import {
   parseRecipe,
   extractStepParams,
-  formatMealieToText, isKeywordInText,
+  formatMealieToText,
+  isKeywordInText,
 } from '@/app/lib/utils';
 
 export type ViewState = 'input' | 'processing' | 'cooking';
@@ -218,7 +219,7 @@ export const useCookingState = (): UseCookingState => {
       setRawText(formattedText);
 
       setTimeout(() => {
-        setRecipe(parseRecipe(formattedText, slug));
+        setRecipe(parseRecipe(formattedText, slug, detail.orgURL));
         setCheckedIngredients(new Set());
         setCurrentStep(-1);
         setView('cooking');
@@ -254,14 +255,10 @@ export const useCookingState = (): UseCookingState => {
         setIsTimerRunning(false);
       }
 
-      console.log('recipe.ingredients', recipe.ingredients);
-
       const matchedIngredients = recipe.ingredients.filter(
         ing =>
           ing.keywords.length > 0 &&
-          ing.keywords.some(keyword =>
-            isKeywordInText(keyword, stepText),
-          ),
+          ing.keywords.some(keyword => isKeywordInText(keyword, stepText)),
       );
 
       setStepIngredients(matchedIngredients);

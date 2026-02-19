@@ -3,11 +3,11 @@ import { distance } from 'fastest-levenshtein';
 
 const normalizeText = (text: string): string => {
   return text
-  .toLowerCase()
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
-  .replace(/œ/g, 'oe')
-  .replace(/æ/g, 'ae');
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
+    .replace(/œ/g, 'oe')
+    .replace(/æ/g, 'ae');
 };
 
 export const isKeywordInText = (keyword: string, text: string): boolean => {
@@ -19,13 +19,18 @@ export const isKeywordInText = (keyword: string, text: string): boolean => {
 
   for (const word of words) {
     // On ignore les petits mots du texte pour éviter le bruit
-    if (word.length < 3 && normKeyword.length >= 3) continue;
+    if (word.length < 3 && normKeyword.length >= 3) {
+      continue;
+    }
 
     // Correspondance exacte
-    if (word === normKeyword) return true;
+    if (word === normKeyword) {
+      return true;
+    }
 
     // Tolérance dynamique basée sur la taille du mot-clé
     let allowedDistance = 0;
+
     if (normKeyword.length > 5) {
       allowedDistance = 2; // Grands mots : 2 erreurs max
     } else if (normKeyword.length > 3) {
@@ -39,12 +44,17 @@ export const isKeywordInText = (keyword: string, text: string): boolean => {
 
     // Cas spécial pour les pluriels des très petits mots
     if (normKeyword.length <= 3) {
-      if (word === normKeyword + 's' || word === normKeyword + 'x') return true;
+      if (word === normKeyword + 's' || word === normKeyword + 'x') {
+        return true;
+      }
     }
 
     // Détection des préfixes pour les mots longs
     if (normKeyword.length >= 4) {
-      if ((word.startsWith(normKeyword) || normKeyword.startsWith(word)) && Math.abs(word.length - normKeyword.length) <= 2) {
+      if (
+        (word.startsWith(normKeyword) || normKeyword.startsWith(word)) &&
+        Math.abs(word.length - normKeyword.length) <= 2
+      ) {
         return true;
       }
     }
@@ -57,23 +67,124 @@ export const parseIngredientLine = (line: string): Ingredient => {
   const cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
   const stopWords = new Set([
     // Articles & Prépositions
-    'de', 'd', 'du', 'des', 'le', 'la', 'les', 'un', 'une', 'en', 'a', 'au', 'aux', 'et', 'ou', 'pour', 'avec', 'sans',
+    'de',
+    'd',
+    'du',
+    'des',
+    'le',
+    'la',
+    'les',
+    'un',
+    'une',
+    'en',
+    'a',
+    'au',
+    'aux',
+    'et',
+    'ou',
+    'pour',
+    'avec',
+    'sans',
     // Unités courtes
-    'g', 'kg', 'mg', 'l', 'cl', 'ml', 'dl', 'c', 'cs', 'cc', 'cas', 'cac',
+    'g',
+    'kg',
+    'mg',
+    'l',
+    'cl',
+    'ml',
+    'dl',
+    'c',
+    'cs',
+    'cc',
+    'cas',
+    'cac',
     // Unités longues
-    'gramme', 'grammes', 'kilo', 'kilos', 'litre', 'litres', 'cuillere', 'cuilleres', 'pincee', 'pincees', 'poignee', 'poignees', 'verre', 'verres', 'tasse', 'tasses', 'bol', 'bols', 'gousse', 'gousses', 'tranche', 'tranches', 'morceau', 'morceaux', 'sachet', 'sachets', 'boite', 'boites', 'paquet', 'paquets', 'filet', 'filets', 'zeste', 'zestes', 'brin', 'brins', 'feuille', 'feuilles', 'branche', 'branches', 'botte', 'bottes', 'cafe', 'soupe',
+    'gramme',
+    'grammes',
+    'kilo',
+    'kilos',
+    'litre',
+    'litres',
+    'cuillere',
+    'cuilleres',
+    'pincee',
+    'pincees',
+    'poignee',
+    'poignees',
+    'verre',
+    'verres',
+    'tasse',
+    'tasses',
+    'bol',
+    'bols',
+    'gousse',
+    'gousses',
+    'tranche',
+    'tranches',
+    'morceau',
+    'morceaux',
+    'sachet',
+    'sachets',
+    'boite',
+    'boites',
+    'paquet',
+    'paquets',
+    'filet',
+    'filets',
+    'zeste',
+    'zestes',
+    'brin',
+    'brins',
+    'feuille',
+    'feuilles',
+    'branche',
+    'branches',
+    'botte',
+    'bottes',
+    'cafe',
+    'soupe',
     // Adjectifs & Modificateurs courants
-    'facultatif', 'optionnel', 'environ', 'quelques', 'frais', 'fraiche', 'gros', 'grosse', 'petit', 'petite', 'moyen', 'moyenne', 'hache', 'hachee', 'coupe', 'coupee', 'entier', 'entiere', 'battu', 'battue', 'moulu', 'moulue', 'rape', 'rapee', 'bien', 'tres', 'peu', 'plus', 'moins', 'selon', 'gout',
+    'facultatif',
+    'optionnel',
+    'environ',
+    'quelques',
+    'frais',
+    'fraiche',
+    'gros',
+    'grosse',
+    'petit',
+    'petite',
+    'moyen',
+    'moyenne',
+    'hache',
+    'hachee',
+    'coupe',
+    'coupee',
+    'entier',
+    'entiere',
+    'battu',
+    'battue',
+    'moulu',
+    'moulue',
+    'rape',
+    'rapee',
+    'bien',
+    'tres',
+    'peu',
+    'plus',
+    'moins',
+    'selon',
+    'gout',
   ]);
 
   const tokens = cleanLine
-  .toLowerCase()
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '') // On enlève les accents pour faciliter le filtrage
-  .replace(/[0-9,.\(\)]+/g, ' ')
-  .split(/[\s']+/)
-  .filter(w => w.length > 2)
-  .filter(w => !stopWords.has(w));
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // On enlève les accents pour faciliter le filtrage
+    .replace(/[0-9,.\(\)]+/g, ' ')
+    .split(/[\s']+/)
+    .filter(w => w.length > 2)
+    .filter(w => !stopWords.has(w));
 
   return { fullText: cleanLine, keywords: tokens };
 };
@@ -148,6 +259,8 @@ export const extractStepParams = (text: string): StepParams => {
       }
     }
   }
+  
+  console.log('text', text);
 
   // 4. Détection du sens inverse
   if (
@@ -175,7 +288,11 @@ const cleanStepText = (line: string): string => {
   return line;
 };
 
-export const parseRecipe = (input: string, slug?: string): Recipe => {
+export const parseRecipe = (
+  input: string,
+  slug?: string,
+  orgURL?: string,
+): Recipe => {
   try {
     const trimmedInput = input.trim();
 
@@ -192,6 +309,7 @@ export const parseRecipe = (input: string, slug?: string): Recipe => {
             : [],
           steps: jsonRecipe.steps.map((step: string) => cleanStepText(step)),
           slug,
+          orgURL,
         };
       }
     }
@@ -266,7 +384,7 @@ export const parseRecipe = (input: string, slug?: string): Recipe => {
     steps = ['Ajoutez vos instructions ici.'];
   }
 
-  return { title, ingredients, steps, slug };
+  return { title, ingredients, steps, slug, orgURL };
 };
 
 export const formatMealieToText = (

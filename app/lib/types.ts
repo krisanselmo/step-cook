@@ -18,6 +18,7 @@ export interface Recipe {
   ingredients: Ingredient[];
   steps: string[];
   slug?: string;
+  orgURL?: string;
 }
 
 export interface ModalData {
@@ -52,6 +53,7 @@ export interface MealieRecipeDetail {
   name: string;
   recipeIngredient: MealieIngredient[];
   recipeInstructions: MealieInstruction[];
+  orgURL?: string;
 }
 
 export interface ThemePlugin {

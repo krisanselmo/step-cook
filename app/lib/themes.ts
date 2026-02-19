@@ -1,4 +1,12 @@
-import { ChefHat, Fish, Zap } from 'lucide-react';
+import {
+  ChefHat,
+  CupSoda,
+  Fish,
+  Leaf,
+  Sparkles,
+  Wheat,
+  Zap,
+} from 'lucide-react';
 import { ThemePlugin } from './types';
 
 // Thème 1 : Classique (Vert/Clean)
@@ -29,7 +37,7 @@ export const defaultTheme: ThemePlugin = {
 };
 
 // Thème 2 : Dave The Diver (Pixel Art / Bancho Sushi)
-export const daveTheme: ThemePlugin = {
+const daveTheme: ThemePlugin = {
   id: 'dave',
   name: 'Dave The Diver',
   title: 'BANCHO SUSHI',
@@ -65,7 +73,7 @@ export const daveTheme: ThemePlugin = {
 };
 
 // Thème 3 : Cyberpunk (Rose/Néon/Mono)
-export const cyberTheme: ThemePlugin = {
+const cyberTheme: ThemePlugin = {
   id: 'cyber',
   name: 'Cyberpunk',
   title: 'NET_COOK',
@@ -92,4 +100,8 @@ export const cyberTheme: ThemePlugin = {
   },
 };
 
-export const THEMES: ThemePlugin[] = [defaultTheme, daveTheme, cyberTheme];
+export const THEMES = [
+  defaultTheme,
+  daveTheme,
+  cyberTheme,
+] as const satisfies ThemePlugin[];

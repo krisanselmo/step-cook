@@ -23,6 +23,7 @@ import {
   Check,
   Camera,
   UploadCloud,
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/Button';
 import { ThemeDropdown } from '@/app/components/ui/ThemeDropdown';
@@ -158,6 +159,17 @@ export const CookingView: React.FC<CookingViewProps> = ({
             >
               <ExternalLink size={16} />
             </button>
+          )}
+          {recipe.orgURL && (
+            <a
+              href={recipe.orgURL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`transition-colors ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}
+              title="Voir la recette originale"
+            >
+              <Globe size={16} />
+            </a>
           )}
           {/* Toggles */}
           <button
