@@ -59,13 +59,13 @@ export const InputView: React.FC<InputViewProps> = ({
       <div className="absolute top-4 right-4 z-10 flex gap-2 items-center">
         <ThemeDropdown currentTheme={theme} setThemeId={setActiveThemeId} isDarkMode={isDarkMode} />
 
-        <button
-          onClick={() => setIsDarkMode(!isDarkMode)}
-          className={`p-2 rounded-full transition-colors ${t('bg-gray-800 text-gray-400 hover:text-white', 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200 shadow-sm')}`}
-        >
-          {isDarkMode ? <Moon size={20} /> : <Sun size={20} />}
-        </button>
-      </div>
+                  <button
+                    onClick={() => setIsDarkMode(!isDarkMode)}
+                    aria-label={isDarkMode ? 'Passer en mode clair' : 'Passer en mode sombre'}
+                    className={`p-2 rounded-full transition-colors ${t('bg-gray-800 text-gray-400 hover:text-white', 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200 shadow-sm')}`}
+                  >
+                    {isDarkMode ? <Moon size={20} /> : <Sun size={20} />}
+                  </button>      </div>
 
       <div className="max-w-5xl w-full flex flex-col h-[90vh] gap-6">
         <div className="text-center shrink-0">

@@ -130,7 +130,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
           >
             <Sparkles size={16} />
           </button>
-          <button onClick={() => setIsDarkMode(!isDarkMode)} className={`transition-colors ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}>
+          <button onClick={() => setIsDarkMode(!isDarkMode)} aria-label={isDarkMode ? 'Passer en mode clair' : 'Passer en mode sombre'} className={`transition-colors ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}>
             {isDarkMode ? <Moon size={16} /> : <Sun size={16} />}
           </button>
           <span className={`text-xs font-mono ${t('text-gray-500', 'text-gray-500')}`}>{currentTime}</span>
@@ -265,10 +265,10 @@ export const CookingView: React.FC<CookingViewProps> = ({
 
         {/* Navigation */}
         <div className="absolute bottom-16 left-0 right-0 px-6 flex items-center justify-between pointer-events-none">
-          <button onClick={() => setCurrentStep(p => Math.max(-1, p - 1))} disabled={currentStep === -1} className={`w-16 h-16 rounded-full backdrop-blur-md border flex items-center justify-center shadow-xl transition-all active:scale-90 pointer-events-auto ${currentStep === -1 ? 'opacity-0' : 'opacity-100'} ${t('bg-gray-900/90 border-gray-700 text-white hover:bg-gray-800', 'bg-white/90 border-gray-200 text-gray-800 hover:bg-gray-50')}`}>
+          <button aria-label="Étape précédente" onClick={() => setCurrentStep(p => Math.max(-1, p - 1))} disabled={currentStep === -1} className={`w-16 h-16 rounded-full backdrop-blur-md border flex items-center justify-center shadow-xl transition-all active:scale-90 pointer-events-auto ${currentStep === -1 ? 'opacity-0' : 'opacity-100'} ${t('bg-gray-900/90 border-gray-700 text-white hover:bg-gray-800', 'bg-white/90 border-gray-200 text-gray-800 hover:bg-gray-50')}`}>
             <ChevronLeft size={32} />
           </button>
-          <button onClick={() => setCurrentStep(p => Math.min(recipe.steps.length, p + 1))} disabled={isFinished} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-90 pointer-events-auto ${isOverview ? `${theme.colors.bgPrimary} text-white w-auto px-8 ${theme.properties.radius}` : `${theme.colors.bgPrimary} text-white`}`}>
+          <button aria-label="Étape suivante" onClick={() => setCurrentStep(p => Math.min(recipe.steps.length, p + 1))} disabled={isFinished} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-90 pointer-events-auto ${isOverview ? `${theme.colors.bgPrimary} text-white w-auto px-8 ${theme.properties.radius}` : `${theme.colors.bgPrimary} text-white`}`}>
             {isOverview ? <span className="font-bold text-lg">Démarrer</span> : <ChevronRight size={32} />}
           </button>
         </div>

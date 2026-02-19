@@ -113,16 +113,17 @@ export const parseRecipe = (input: string, slug?: string): Recipe => {
   .filter(line => line.trim() !== '')
   .filter(line => !imageRegex.test(line));
 
-  const title = lines[0] || "Recette";
+  const title = lines[0].trim() || "Recette";
   const ingredients: Ingredient[] = [];
   let steps: string[] = [];
   let currentSection = 'unknown';
 
-  const ingredientKeywords = ['ingrédient', 'ingredients', 'il vous faut', 'liste'];
-  const stepKeywords = ['préparation', 'étape', 'instruction', 'recette', 'instructions'];
+  const ingredientKeywords = [/^(ingrédient|ingredients|il vous faut|liste):?$/i];
+  const stepKeywords = [/^(préparation|étape|instruction|recette|instructions):?$/i];
 
   const addIngredient = (line: string) => ingredients.push(parseIngredientLine(line));
 
+  // Small recipes with less than 5 lines are treated as steps
   if (lines.length < 5) {
     steps = lines.map(l => cleanStepText(l));
   } else {
@@ -130,11 +131,11 @@ export const parseRecipe = (input: string, slug?: string): Recipe => {
       let line = lines[i].trim();
       const lowerLine = line.toLowerCase();
 
-      if (ingredientKeywords.some(k => lowerLine.includes(k)) && line.length < 30) {
+      if (ingredientKeywords.some(re => re.test(lowerLine))) {
         currentSection = 'ingredients';
         continue;
       }
-      if (stepKeywords.some(k => lowerLine.includes(k)) && line.length < 30) {
+      if (stepKeywords.some(re => re.test(lowerLine))) {
         currentSection = 'steps';
         continue;
       }
@@ -165,7 +166,18 @@ export const formatMealieToText = (mealieRecipe: MealieRecipeDetail): string => 
 
   text += `Ingrédients:\n`;
   mealieRecipe.recipeIngredient.forEach(ing => {
-    const line = ing.display || ing.note || `${ing.quantity || ''} ${ing.unit?.name || ''} ${ing.food?.name || ''}`;
+    let line = '';
+    if (ing.display) {
+      line = ing.display;
+    } else if (ing.note) {
+      line = ing.note;
+    } else {
+      const parts = [];
+      if (ing.quantity) parts.push(ing.quantity);
+      if (ing.unit?.name) parts.push(ing.unit.name);
+      if (ing.food?.name && ing.food.name !== ing.unit?.name) parts.push(ing.food.name);
+      line = parts.join(' ');
+    }
     text += `- ${line}\n`;
   });
 
