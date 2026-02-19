@@ -45,6 +45,7 @@ export async function GET() {
 
     try {
       const data = JSON.parse(responseText);
+
       // On retourne items si paginé, ou la réponse directe
       return NextResponse.json(data.items || data);
     } catch {
@@ -56,6 +57,7 @@ export async function GET() {
     }
   } catch (error) {
     console.error('[Mealie Proxy] Critical Error:', error);
+
     return NextResponse.json(
       {
         error: 'Impossible de récupérer les recettes',

@@ -14,6 +14,18 @@ const eslintConfig = defineConfig([
     'next-env.d.ts',
     'private/**',
   ]),
+  {
+    rules: {
+      curly: ['error', 'all'],
+      'padding-line-between-statements': [
+        'error',
+        { blankLine: 'always', prev: '*', next: 'return' },
+        { blankLine: 'always', prev: '*', next: 'for' },
+        { blankLine: 'always', prev: '*', next: 'if' },
+        { blankLine: 'always', prev: '*', next: 'try' },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

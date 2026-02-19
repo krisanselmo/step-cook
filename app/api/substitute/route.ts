@@ -55,6 +55,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ suggestion });
   } catch (error) {
     console.error('API Error:', error);
+
     return NextResponse.json(
       { error: 'Erreur serveur interne' },
       { status: 500 },

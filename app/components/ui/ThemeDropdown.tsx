@@ -29,6 +29,7 @@ export const ThemeDropdown: React.FC<ThemeDropdownProps> = ({
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
+
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
@@ -65,6 +66,7 @@ export const ThemeDropdown: React.FC<ThemeDropdownProps> = ({
             {THEMES.map(theme => {
               const Icon = theme.icon;
               const isActive = currentTheme.id === theme.id;
+
               return (
                 <button
                   key={theme.id}

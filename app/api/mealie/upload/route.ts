@@ -97,6 +97,7 @@ export async function POST(request: Request) {
     });
   } catch (error: unknown) {
     console.error('[Mealie Upload] Critical Error:', error);
+
     return NextResponse.json(
       {
         error: 'Échec du traitement de la requête',

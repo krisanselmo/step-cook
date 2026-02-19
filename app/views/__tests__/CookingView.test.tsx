@@ -87,6 +87,7 @@ describe('CookingView', () => {
     mockFormatTime = jest.fn((seconds: number) => {
       const m = Math.floor(seconds / 60);
       const s = seconds % 60;
+
       return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     });
     mockOpenGeminiModal = jest.fn();
@@ -95,7 +96,7 @@ describe('CookingView', () => {
     mockHandleUpload = jest.fn();
 
     const baseProps = {
-      view: 'cooking' as 'cooking',
+      view: 'cooking' as const,
       setView: mockSetView,
       recipe: mockRecipe,
       currentStep: -1,
@@ -164,6 +165,7 @@ describe('CookingView', () => {
       handleFileChange: mockHandleFileChange,
       handleUpload: mockHandleUpload,
     };
+
     return { ...baseProps, ...overrides };
   };
 

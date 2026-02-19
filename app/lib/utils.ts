@@ -43,13 +43,17 @@ export const extractStepParams = (text: string): StepParams => {
   let seconds = 0;
   let reverse = false;
 
-  if (!text) return { time, temp, speed, seconds, reverse };
+  if (!text) {
+    return { time, temp, speed, seconds, reverse };
+  }
 
   // 1. Détection du temps
   const timeMatch = text.match(/(\d+)\s*(sec|min|mn|h)/i);
+
   if (timeMatch) {
     const val = parseInt(timeMatch[1], 10);
     const unit = timeMatch[2].toLowerCase();
+
     if (unit.startsWith('s')) {
       time = `00:${val.toString().padStart(2, '0')}`;
       seconds = val;
@@ -64,13 +68,18 @@ export const extractStepParams = (text: string): StepParams => {
 
   // 2. Détection de la température
   const tempMatch = text.match(/(\d+)\s*°|varoma/i);
+
   if (tempMatch) {
     temp = tempMatch[0].toUpperCase().replace(/\s/g, '');
-    if (!temp.includes('C') && !temp.includes('VAROMA')) temp += 'C';
+
+    if (!temp.includes('C') && !temp.includes('VAROMA')) {
+      temp += 'C';
+    }
   }
 
   // 3. Détection de la vitesse et du mode mijotage
   const lowerText = text.toLowerCase();
+
   if (lowerText.match(/pétrin|pétrir|épi/)) {
     speed = 'EPI';
   } else if (lowerText.match(/turbo/)) {
@@ -80,6 +89,7 @@ export const extractStepParams = (text: string): StepParams => {
     const speedMatch = text.match(
       /(vit|vitesse)\.?\s*(\d+(\.\d+)?(\-\d+)?)|mijotage/i,
     );
+
     if (speedMatch) {
       speed = speedMatch[0].toLowerCase().includes('mijotage')
         ? 'MIJOT'
@@ -87,6 +97,7 @@ export const extractStepParams = (text: string): StepParams => {
     } else {
       // Recherche de vitesse numérique après un slash (ex: /5 ou //3.5)
       const slashSpeedMatch = text.match(/\/\/?(\d+(\.\d+)?)/);
+
       if (slashSpeedMatch) {
         speed = slashSpeedMatch[1];
       } else if (text.includes('//')) {
@@ -113,10 +124,12 @@ const cleanStepText = (line: string): string => {
   if (line.match(/\/\/\d/)) {
     return line.replace(/\/\//g, ' (sens inverse) ');
   }
+
   // Si // est à la fin ou seul, on précise le mijotage
   if (line.includes('//')) {
     return line.replace(/\/\//g, ' (sens inverse + mijotage) ');
   }
+
   return line;
 };
 
@@ -180,6 +193,7 @@ export const parseRecipe = (input: string, slug?: string): Recipe => {
         currentSection = 'ingredients';
         continue;
       }
+
       if (stepKeywords.some(re => re.test(lowerLine))) {
         currentSection = 'steps';
         continue;
@@ -189,8 +203,12 @@ export const parseRecipe = (input: string, slug?: string): Recipe => {
         addIngredient(line);
       } else if (currentSection === 'steps') {
         line = cleanStepText(line);
-        if (line.match(/^\d+\./) || steps.length === 0) steps.push(line);
-        else steps[steps.length - 1] += ' ' + line;
+
+        if (line.match(/^\d+\./) || steps.length === 0) {
+          steps.push(line);
+        } else {
+          steps[steps.length - 1] += ' ' + line;
+        }
       } else {
         if (line.startsWith('-') || line.startsWith('•')) {
           addIngredient(line);
@@ -202,7 +220,10 @@ export const parseRecipe = (input: string, slug?: string): Recipe => {
     }
   }
 
-  if (steps.length === 0) steps = ['Ajoutez vos instructions ici.'];
+  if (steps.length === 0) {
+    steps = ['Ajoutez vos instructions ici.'];
+  }
+
   return { title, ingredients, steps, slug };
 };
 
@@ -214,16 +235,25 @@ export const formatMealieToText = (
   text += `Ingrédients:\n`;
   mealieRecipe.recipeIngredient.forEach(ing => {
     let line = '';
+
     if (ing.display) {
       line = ing.display;
     } else if (ing.note) {
       line = ing.note;
     } else {
       const parts = [];
-      if (ing.quantity) parts.push(ing.quantity);
-      if (ing.unit?.name) parts.push(ing.unit.name);
-      if (ing.food?.name && ing.food.name !== ing.unit?.name)
+
+      if (ing.quantity) {
+        parts.push(ing.quantity);
+      }
+
+      if (ing.unit?.name) {
+        parts.push(ing.unit.name);
+      }
+
+      if (ing.food?.name && ing.food.name !== ing.unit?.name) {
         parts.push(ing.food.name);
+      }
       line = parts.join(' ');
     }
     text += `- ${line}\n`;

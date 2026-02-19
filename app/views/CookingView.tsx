@@ -114,7 +114,9 @@ export const CookingView: React.FC<CookingViewProps> = ({
   handleFileChange,
   handleUpload,
 }) => {
-  if (!recipe) return null;
+  if (!recipe) {
+    return null;
+  }
 
   const isOverview = currentStep === -1;
   const isFinished = currentStep >= recipe.steps.length;
@@ -192,6 +194,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
             <div className="space-y-3">
               {recipe.ingredients.map((ing, i) => {
                 const isChecked = checkedIngredients.has(ing.fullText);
+
                 return (
                   <button
                     key={i}
@@ -377,6 +380,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
                 <div className="flex flex-wrap justify-center gap-2 mt-8 opacity-90">
                   {stepIngredients.map((ing, i) => {
                     const isChecked = checkedIngredients.has(ing.fullText);
+
                     return (
                       <button
                         key={i}
@@ -432,6 +436,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
           >
             <ChevronLeft size={32} />
           </button>
+
           <button
             aria-label="Étape suivante"
             onClick={() =>

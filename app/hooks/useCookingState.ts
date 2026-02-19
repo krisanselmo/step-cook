@@ -143,6 +143,7 @@ export const useCookingState = (): UseCookingState => {
 
   const filteredRecipes = useMemo(() => {
     let result = [...mealieRecipes];
+
     if (searchTerm.trim()) {
       const lowerTerm = searchTerm.toLowerCase();
       result = result.filter(
@@ -154,6 +155,7 @@ export const useCookingState = (): UseCookingState => {
     result.sort((a, b) =>
       sortOption === 'alpha' ? a.name.localeCompare(b.name) : 0,
     );
+
     return result;
   }, [mealieRecipes, searchTerm, sortOption]);
 
@@ -168,22 +170,29 @@ export const useCookingState = (): UseCookingState => {
     updateClock();
     const interval = setInterval(updateClock, 60000);
     fetchMealieRecipes();
+
     return () => clearInterval(interval);
   }, []);
 
   // Cleanup preview URL
   useEffect(() => {
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
     };
   }, [previewUrl]);
 
   const fetchMealieRecipes = async () => {
     setIsMealieLoading(true);
     setMealieError(null);
+
     try {
       const res = await fetch('/api/mealie/recipes');
-      if (!res.ok) throw new Error('Erreur chargement');
+
+      if (!res.ok) {
+        throw new Error('Erreur chargement');
+      }
       const data = await res.json();
       setMealieRecipes(data);
     } catch (err) {
@@ -196,8 +205,10 @@ export const useCookingState = (): UseCookingState => {
 
   const loadMealieRecipe = async (slug: string) => {
     setView('processing');
+
     try {
       const res = await fetch(`/api/mealie/detail?slug=${slug}`);
+
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || 'Erreur chargement détail');
@@ -272,14 +283,18 @@ export const useCookingState = (): UseCookingState => {
     } else if (timer === 0) {
       setIsTimerRunning(false);
     }
+
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
     };
   }, [isTimerRunning, timer]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
+
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
@@ -326,6 +341,7 @@ export const useCookingState = (): UseCookingState => {
 
   const generateGeminiRecipe = async (userPrompt: string) => {
     setView('processing');
+
     try {
       const res = await fetch('/api/gemini/generate', {
         method: 'POST',
@@ -360,6 +376,7 @@ export const useCookingState = (): UseCookingState => {
       openGeminiModal(ingredientFullText);
     } else {
       const newChecked = new Set(checkedIngredients);
+
       if (newChecked.has(ingredientFullText)) {
         newChecked.delete(ingredientFullText);
       } else {
@@ -372,6 +389,7 @@ export const useCookingState = (): UseCookingState => {
   // --- Handlers Upload Photo ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+
     if (file) {
       setSelectedImage(file);
       const url = URL.createObjectURL(file);
@@ -380,10 +398,13 @@ export const useCookingState = (): UseCookingState => {
   };
 
   const handleUpload = async () => {
-    if (!recipe?.slug) return;
+    if (!recipe?.slug) {
+      return;
+    }
 
     setIsUploading(true);
     const formData = new FormData();
+
     if (selectedImage) {
       formData.append('image', selectedImage);
     }

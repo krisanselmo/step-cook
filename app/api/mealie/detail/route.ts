@@ -8,8 +8,9 @@ export async function GET(request: Request) {
   const token = process.env.MEALIE_API_TOKEN;
   const cfCookie = process.env.MEALIE_CF_COOKIE;
 
-  if (!slug)
+  if (!slug) {
     return NextResponse.json({ error: 'Slug manquant' }, { status: 400 });
+  }
 
   const headers: HeadersInit = {
     Authorization: `Bearer ${token}`,
@@ -34,6 +35,7 @@ export async function GET(request: Request) {
         `[Mealie Detail] Error ${response.status}:`,
         responseText.slice(0, 200),
       );
+
       // Si 404, on renvoie 404 au front pour qu'il le sache
       if (response.status === 404) {
         return NextResponse.json(
@@ -59,6 +61,7 @@ export async function GET(request: Request) {
     }
   } catch (error) {
     console.error('[Mealie Detail] Critical Error:', error);
+
     return NextResponse.json(
       {
         error: 'Impossible de récupérer la recette',

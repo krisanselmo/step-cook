@@ -33,10 +33,12 @@ export async function POST(req: NextRequest) {
       'gemini-preprompt.txt',
     );
     let prePrompt = '';
+
     try {
       prePrompt = await fs.readFile(prePromptPath, 'utf8');
     } catch (readError) {
       console.error('Error reading pre-prompt file:', readError);
+
       return NextResponse.json(
         { error: 'Failed to load Gemini pre-prompt.' },
         { status: 500 },
@@ -65,6 +67,7 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error('Error in Gemini generate API:', error);
+
     // More specific error handling could be implemented here for different Gemini API errors
     return NextResponse.json(
       { error: 'Internal Server Error during Gemini generation.' },
