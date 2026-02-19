@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React from 'react';
 import { useCookingState } from './hooks/useCookingState';
@@ -92,12 +92,7 @@ export default function Home() {
         />
       );
     case 'processing':
-      return (
-        <ProcessingView
-          theme={theme}
-          t={t}
-        />
-      );
+      return <ProcessingView theme={theme} t={t} />;
     case 'cooking':
       return (
         <CookingView

@@ -8,11 +8,12 @@ export async function GET(request: Request) {
   const token = process.env.MEALIE_API_TOKEN;
   const cfCookie = process.env.MEALIE_CF_COOKIE;
 
-  if (!slug) return NextResponse.json({ error: "Slug manquant" }, { status: 400 });
+  if (!slug)
+    return NextResponse.json({ error: 'Slug manquant' }, { status: 400 });
 
   const headers: HeadersInit = {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
   };
 
   if (cfCookie) {
@@ -23,16 +24,22 @@ export async function GET(request: Request) {
     console.log(`[Mealie Detail] Fetching slug: ${slug}`);
 
     const response = await fetch(`${baseUrl}/api/recipes/${slug}`, {
-      headers
+      headers,
     });
 
     const responseText = await response.text();
 
     if (!response.ok) {
-      console.error(`[Mealie Detail] Error ${response.status}:`, responseText.slice(0, 200));
+      console.error(
+        `[Mealie Detail] Error ${response.status}:`,
+        responseText.slice(0, 200),
+      );
       // Si 404, on renvoie 404 au front pour qu'il le sache
       if (response.status === 404) {
-        return NextResponse.json({ error: "Recette introuvable sur Mealie" }, { status: 404 });
+        return NextResponse.json(
+          { error: 'Recette introuvable sur Mealie' },
+          { status: 404 },
+        );
       }
 
       throw new Error(`Erreur Mealie: ${response.status}`);
@@ -43,16 +50,21 @@ export async function GET(request: Request) {
 
       return NextResponse.json(data);
     } catch {
-      console.error("[Mealie Detail] JSON Parse Error. Content:", responseText.slice(0, 200));
+      console.error(
+        '[Mealie Detail] JSON Parse Error. Content:',
+        responseText.slice(0, 200),
+      );
 
-      throw new Error("Réponse invalide (HTML reçu au lieu de JSON)");
+      throw new Error('Réponse invalide (HTML reçu au lieu de JSON)');
     }
-
   } catch (error) {
-    console.error("[Mealie Detail] Critical Error:", error);
-    return NextResponse.json({
-      error: "Impossible de récupérer la recette",
-      details: error instanceof Error ? error.message : String(error)
-    }, { status: 500 });
+    console.error('[Mealie Detail] Critical Error:', error);
+    return NextResponse.json(
+      {
+        error: 'Impossible de récupérer la recette',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    );
   }
 }

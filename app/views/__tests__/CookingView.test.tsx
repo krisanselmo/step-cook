@@ -18,15 +18,30 @@ jest.mock('next/image', () => ({
 }));
 
 describe('CookingView', () => {
-  const mockUseCookingState = useCookingState as jest.MockedFunction<typeof useCookingState>;
+  const mockUseCookingState = useCookingState as jest.MockedFunction<
+    typeof useCookingState
+  >;
 
   const mockRecipe: Recipe = {
     title: 'Test Recipe',
-    ingredients: [{ fullText: '1 Egg', keywords: ['egg'] }, { fullText: '2 Sugar', keywords: ['sugar'] }],
-    steps: ['Step 1: Mix ingredients', 'Step 2: Cook for 5 min', 'Step 3: Serve warm'],
+    ingredients: [
+      { fullText: '1 Egg', keywords: ['egg'] },
+      { fullText: '2 Sugar', keywords: ['sugar'] },
+    ],
+    steps: [
+      'Step 1: Mix ingredients',
+      'Step 2: Cook for 5 min',
+      'Step 3: Serve warm',
+    ],
   };
 
-  const defaultStepParams: StepParams = { time: '--:--', temp: '---', speed: '---', seconds: 0, reverse: false };
+  const defaultStepParams: StepParams = {
+    time: '--:--',
+    temp: '---',
+    speed: '---',
+    seconds: 0,
+    reverse: false,
+  };
 
   let mockSetView: jest.Mock;
   let mockSetCurrentStep: jest.Mock;
@@ -50,7 +65,9 @@ describe('CookingView', () => {
   let mockHandleFileChange: jest.Mock;
   let mockHandleUpload: jest.Mock; // Fixed type here
 
-  const getMockedDefaultProps = (overrides?: Partial<ReturnType<typeof useCookingState>>) => {
+  const getMockedDefaultProps = (
+    overrides?: Partial<ReturnType<typeof useCookingState>>,
+  ) => {
     mockSetView = jest.fn();
     mockSetCurrentStep = jest.fn();
     mockSetTimer = jest.fn();
@@ -95,12 +112,24 @@ describe('CookingView', () => {
         name: 'Default',
         title: 'Step Cook',
         icon: () => <svg data-testid="theme-icon" />,
-        properties: { font: 'font-sans', radius: 'rounded-xl', buttonStyle: 'base' },
+        properties: {
+          font: 'font-sans',
+          radius: 'rounded-xl',
+          buttonStyle: 'base',
+        },
         colors: {
-          accent: 'text-blue-500', accentDarker: 'text-blue-600', bgPrimary: 'bg-blue-500',
-          bgPrimaryHover: 'hover:bg-blue-600', borderAccent: 'border-blue-500', shadowAccent: 'shadow-blue-500',
-          checkedBgDark: 'bg-gray-800', checkedBgLight: 'bg-gray-100', rootBgDark: 'bg-gray-950',
-          rootBgLight: 'bg-gray-50', cardBgDark: 'bg-gray-900', cardBgLight: 'bg-white',
+          accent: 'text-blue-500',
+          accentDarker: 'text-blue-600',
+          bgPrimary: 'bg-blue-500',
+          bgPrimaryHover: 'hover:bg-blue-600',
+          borderAccent: 'border-blue-500',
+          shadowAccent: 'shadow-blue-500',
+          checkedBgDark: 'bg-gray-800',
+          checkedBgLight: 'bg-gray-100',
+          rootBgDark: 'bg-gray-950',
+          rootBgLight: 'bg-gray-50',
+          cardBgDark: 'bg-gray-900',
+          cardBgLight: 'bg-white',
         },
       },
       setActiveThemeId: mockSetActiveThemeId,
@@ -125,7 +154,9 @@ describe('CookingView', () => {
       isGeminiMode: false,
       setIsGeminiMode: mockSetIsGeminiMode,
       fileInputRef: { current: null },
-      t: jest.fn((darkClass: string, lightClass: string) => baseProps.isDarkMode ? darkClass : lightClass),
+      t: jest.fn((darkClass: string, lightClass: string) =>
+        baseProps.isDarkMode ? darkClass : lightClass,
+      ),
       openMealiePage: mockOpenMealiePage,
       formatTime: mockFormatTime,
       openGeminiModal: mockOpenGeminiModal,
@@ -152,7 +183,9 @@ describe('CookingView', () => {
       expect(screen.getByText('Ingrédients')).toBeInTheDocument();
       expect(screen.getByText('1 Egg')).toBeInTheDocument();
       expect(screen.getByText('2 Sugar')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Démarrer/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Démarrer/i }),
+      ).toBeInTheDocument();
     });
 
     it('calls setCurrentStep with 0 when "Démarrer" is clicked', () => {
@@ -163,14 +196,22 @@ describe('CookingView', () => {
 
     it('calls handleIngredientAction when ingredient is clicked', () => {
       const checkedIngredients = new Set(['1 Egg']);
-      render(<CookingView {...getMockedDefaultProps({ currentStep: -1, checkedIngredients })} />);
+      render(
+        <CookingView
+          {...getMockedDefaultProps({ currentStep: -1, checkedIngredients })}
+        />,
+      );
 
       fireEvent.click(screen.getByText('2 Sugar'));
       expect(mockHandleIngredientAction).toHaveBeenCalledWith('2 Sugar');
     });
 
     it('calls openGeminiModal when ingredient is clicked and in Gemini mode', () => {
-      render(<CookingView {...getMockedDefaultProps({ currentStep: -1, isGeminiMode: true })} />);
+      render(
+        <CookingView
+          {...getMockedDefaultProps({ currentStep: -1, isGeminiMode: true })}
+        />,
+      );
       fireEvent.click(screen.getByText('1 Egg'));
       expect(mockOpenGeminiModal).toHaveBeenCalledWith('1 Egg');
     });
@@ -180,7 +221,10 @@ describe('CookingView', () => {
     let activeStepProps: ReturnType<typeof useCookingState>;
 
     beforeEach(() => {
-      activeStepProps = getMockedDefaultProps({ currentStep: 0, stepParams: { ...defaultStepParams, time: '05:00', seconds: 300 } });
+      activeStepProps = getMockedDefaultProps({
+        currentStep: 0,
+        stepParams: { ...defaultStepParams, time: '05:00', seconds: 300 },
+      });
       mockUseCookingState.mockReturnValue(activeStepProps);
     });
 
@@ -191,7 +235,12 @@ describe('CookingView', () => {
     });
 
     it('displays the timer and allows toggling', () => {
-      const initialProps = getMockedDefaultProps({ currentStep: 0, timer: 300, isTimerRunning: false, stepParams: { ...defaultStepParams, time: '05:00', seconds: 300 } });
+      const initialProps = getMockedDefaultProps({
+        currentStep: 0,
+        timer: 300,
+        isTimerRunning: false,
+        stepParams: { ...defaultStepParams, time: '05:00', seconds: 300 },
+      });
       mockUseCookingState.mockReturnValue(initialProps);
       render(<CookingView {...initialProps} />);
       expect(screen.getByText('05:00')).toBeInTheDocument();
@@ -200,7 +249,12 @@ describe('CookingView', () => {
       fireEvent.click(timerButton!);
       expect(mockSetIsTimerRunning).toHaveBeenCalledWith(true);
 
-      const runningTimerProps = getMockedDefaultProps({ currentStep: 0, timer: 299, isTimerRunning: true, stepParams: { ...defaultStepParams, time: '05:00', seconds: 300 } });
+      const runningTimerProps = getMockedDefaultProps({
+        currentStep: 0,
+        timer: 299,
+        isTimerRunning: true,
+        stepParams: { ...defaultStepParams, time: '05:00', seconds: 300 },
+      });
       mockUseCookingState.mockReturnValue(runningTimerProps); // Simulate running timer
       fireEvent.click(timerButton!);
       expect(mockSetIsTimerRunning).toHaveBeenCalledWith(false);
@@ -214,7 +268,9 @@ describe('CookingView', () => {
 
     it('navigates to the previous step when "previous" button is clicked', () => {
       render(<CookingView {...getMockedDefaultProps({ currentStep: 1 })} />);
-      fireEvent.click(screen.getByRole('button', { name: /Étape précédente/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /Étape précédente/i }),
+      );
       expect(mockSetCurrentStep).toHaveBeenCalledWith(0);
     });
   });
@@ -223,7 +279,9 @@ describe('CookingView', () => {
     let finishedProps: ReturnType<typeof useCookingState>;
 
     beforeEach(() => {
-      finishedProps = getMockedDefaultProps({ currentStep: mockRecipe.steps.length });
+      finishedProps = getMockedDefaultProps({
+        currentStep: mockRecipe.steps.length,
+      });
       mockUseCookingState.mockReturnValue(finishedProps);
     });
 
@@ -241,8 +299,19 @@ describe('CookingView', () => {
 
     it('opens cooked modal when "Je l\'ai cuisiné !" is clicked', () => {
       const recipeWithSlug = { ...mockRecipe, slug: 'test-recipe' };
-      render(<CookingView {...getMockedDefaultProps({ currentStep: mockRecipe.steps.length, recipe: recipeWithSlug })} />);
-      fireEvent.click(screen.getByRole('button', { name: new RegExp('Je l\'ai cuisiné !', 'i') }));
+      render(
+        <CookingView
+          {...getMockedDefaultProps({
+            currentStep: mockRecipe.steps.length,
+            recipe: recipeWithSlug,
+          })}
+        />,
+      );
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: new RegExp("Je l'ai cuisiné !", 'i'),
+        }),
+      );
       expect(mockSetCookedModalOpen).toHaveBeenCalledWith(true);
     });
   });
@@ -252,7 +321,9 @@ describe('CookingView', () => {
       const initialProps = getMockedDefaultProps({ isDarkMode: false });
       mockUseCookingState.mockReturnValue(initialProps);
       render(<CookingView {...initialProps} />);
-      const toggleButton = screen.getByRole('button', { name: /Passer en mode clair/i }); // Sun icon is visible in light mode
+      const toggleButton = screen.getByRole('button', {
+        name: /Passer en mode clair/i,
+      }); // Sun icon is visible in light mode
       fireEvent.click(toggleButton);
       expect(mockSetIsDarkMode).toHaveBeenCalledWith(true);
     });

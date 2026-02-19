@@ -25,7 +25,7 @@ export const defaultTheme: ThemePlugin = {
     rootBgLight: 'bg-gray-100 text-gray-900',
     cardBgDark: 'bg-gray-900 border-gray-800',
     cardBgLight: 'bg-white border-gray-200',
-  }
+  },
 };
 
 // Thème 2 : Dave The Diver (Pixel Art / Bancho Sushi)
@@ -38,7 +38,8 @@ export const daveTheme: ThemePlugin = {
     font: 'font-pixel',
     radius: 'rounded-none',
     // Bouton style "UI de jeu" : Bordure épaisse, ombre dure et décalage au survol/clic
-    buttonStyle: 'border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all',
+    buttonStyle:
+      'border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all',
   },
   colors: {
     accent: 'text-[#00d1ff]', // Cyan néon du jeu
@@ -58,8 +59,9 @@ export const daveTheme: ThemePlugin = {
 
     // Cards
     cardBgDark: 'bg-[#29366f] border-4 border-black', // Panneau métal/sous-marin
-    cardBgLight: 'bg-[#fffdfa] border-4 border-[#3c2a21] shadow-[8px_8px_0px_0px_rgba(60,42,33,0.1)]', // Panneau bois/menu
-  }
+    cardBgLight:
+      'bg-[#fffdfa] border-4 border-[#3c2a21] shadow-[8px_8px_0px_0px_rgba(60,42,33,0.1)]', // Panneau bois/menu
+  },
 };
 
 // Thème 3 : Cyberpunk (Rose/Néon/Mono)
@@ -71,7 +73,8 @@ export const cyberTheme: ThemePlugin = {
   properties: {
     font: 'font-mono',
     radius: 'rounded-none',
-    buttonStyle: 'border border-pink-500 hover:shadow-[0_0_15px_rgba(236,72,153,0.6)] active:bg-pink-500/20',
+    buttonStyle:
+      'border border-pink-500 hover:shadow-[0_0_15px_rgba(236,72,153,0.6)] active:bg-pink-500/20',
   },
   colors: {
     accent: 'text-pink-500',
@@ -86,7 +89,7 @@ export const cyberTheme: ThemePlugin = {
     rootBgLight: 'bg-zinc-100 text-zinc-900',
     cardBgDark: 'bg-zinc-950 border-zinc-800',
     cardBgLight: 'bg-white border-zinc-300',
-  }
+  },
 };
 
 export const THEMES: ThemePlugin[] = [defaultTheme, daveTheme, cyberTheme];

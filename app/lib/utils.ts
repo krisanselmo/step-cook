@@ -2,21 +2,44 @@ import { Ingredient, StepParams, Recipe, MealieRecipeDetail } from './types';
 
 export const parseIngredientLine = (line: string): Ingredient => {
   const cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
-  const stopWords = ['de', 'd\'', 'du', 'des', 'le', 'la', 'les', 'un', 'une', 'en', 'à', 'au', 'aux', 'et', 'ou', 'g', 'kg', 'mg', 'l', 'cl', 'ml'];
+  const stopWords = [
+    'de',
+    "d'",
+    'du',
+    'des',
+    'le',
+    'la',
+    'les',
+    'un',
+    'une',
+    'en',
+    'à',
+    'au',
+    'aux',
+    'et',
+    'ou',
+    'g',
+    'kg',
+    'mg',
+    'l',
+    'cl',
+    'ml',
+  ];
 
-  const tokens = cleanLine.toLowerCase()
-  .replace(/[0-9,.\(\)]+/g, ' ')
-  .split(/[\s']+/)
-  .filter(w => w.length > 2)
-  .filter(w => !stopWords.includes(w));
+  const tokens = cleanLine
+    .toLowerCase()
+    .replace(/[0-9,.\(\)]+/g, ' ')
+    .split(/[\s']+/)
+    .filter(w => w.length > 2)
+    .filter(w => !stopWords.includes(w));
 
   return { fullText: cleanLine, keywords: tokens };
 };
 
 export const extractStepParams = (text: string): StepParams => {
-  let time = "--:--";
-  let temp = "---";
-  let speed = "---";
+  let time = '--:--';
+  let temp = '---';
+  let speed = '---';
   let seconds = 0;
   let reverse = false;
 
@@ -27,9 +50,16 @@ export const extractStepParams = (text: string): StepParams => {
   if (timeMatch) {
     const val = parseInt(timeMatch[1], 10);
     const unit = timeMatch[2].toLowerCase();
-    if (unit.startsWith('s')) { time = `00:${val.toString().padStart(2, '0')}`; seconds = val; }
-    else if (unit.startsWith('m')) { time = `${val.toString().padStart(2, '0')}:00`; seconds = val * 60; }
-    else if (unit.startsWith('h')) { time = `${val}:00:00`; seconds = val * 3600; }
+    if (unit.startsWith('s')) {
+      time = `00:${val.toString().padStart(2, '0')}`;
+      seconds = val;
+    } else if (unit.startsWith('m')) {
+      time = `${val.toString().padStart(2, '0')}:00`;
+      seconds = val * 60;
+    } else if (unit.startsWith('h')) {
+      time = `${val}:00:00`;
+      seconds = val * 3600;
+    }
   }
 
   // 2. Détection de la température
@@ -42,14 +72,18 @@ export const extractStepParams = (text: string): StepParams => {
   // 3. Détection de la vitesse et du mode mijotage
   const lowerText = text.toLowerCase();
   if (lowerText.match(/pétrin|pétrir|épi/)) {
-    speed = "EPI";
+    speed = 'EPI';
   } else if (lowerText.match(/turbo/)) {
-    speed = "TURBO";
+    speed = 'TURBO';
   } else {
     // Recherche par mot clé
-    const speedMatch = text.match(/(vit|vitesse)\.?\s*(\d+(\.\d+)?(\-\d+)?)|mijotage/i);
+    const speedMatch = text.match(
+      /(vit|vitesse)\.?\s*(\d+(\.\d+)?(\-\d+)?)|mijotage/i,
+    );
     if (speedMatch) {
-      speed = speedMatch[0].toLowerCase().includes('mijotage') ? "MIJOT" : speedMatch[2];
+      speed = speedMatch[0].toLowerCase().includes('mijotage')
+        ? 'MIJOT'
+        : speedMatch[2];
     } else {
       // Recherche de vitesse numérique après un slash (ex: /5 ou //3.5)
       const slashSpeedMatch = text.match(/\/\/?(\d+(\.\d+)?)/);
@@ -57,13 +91,16 @@ export const extractStepParams = (text: string): StepParams => {
         speed = slashSpeedMatch[1];
       } else if (text.includes('//')) {
         // S'il y a // mais rien après, c'est le mode mijotage par défaut
-        speed = "MIJOT";
+        speed = 'MIJOT';
       }
     }
   }
 
   // 4. Détection du sens inverse
-  if ((text.includes('//') || lowerText.match(/sens inverse|inversé|inverse/)) && speed !== "EPI") {
+  if (
+    (text.includes('//') || lowerText.match(/sens inverse|inversé|inverse/)) &&
+    speed !== 'EPI'
+  ) {
     reverse = true;
   }
 
@@ -94,34 +131,42 @@ export const parseRecipe = (input: string, slug?: string): Recipe => {
         return {
           title: jsonRecipe.title,
           ingredients: Array.isArray(jsonRecipe.ingredients)
-            ? jsonRecipe.ingredients.map((ing: string) => parseIngredientLine(ing))
+            ? jsonRecipe.ingredients.map((ing: string) =>
+                parseIngredientLine(ing),
+              )
             : [],
           steps: jsonRecipe.steps.map((step: string) => cleanStepText(step)),
-          slug
+          slug,
         };
       }
     }
   } catch {
-    console.log("Input is not valid JSON, falling back to text parsing.");
+    console.log('Input is not valid JSON, falling back to text parsing.');
   }
 
   // 2. PARSING TEXTE CLASSIQUE (Fallback)
   // On ignore les lignes d'images type Markdown ![alt](url)
   const imageRegex = /!\[.*\]\(.*\)/;
 
-  const lines = input.split('\n')
-  .filter(line => line.trim() !== '')
-  .filter(line => !imageRegex.test(line));
+  const lines = input
+    .split('\n')
+    .filter(line => line.trim() !== '')
+    .filter(line => !imageRegex.test(line));
 
-  const title = lines[0].trim() || "Recette";
+  const title = lines[0].trim() || 'Recette';
   const ingredients: Ingredient[] = [];
   let steps: string[] = [];
   let currentSection = 'unknown';
 
-  const ingredientKeywords = [/^(ingrédient|ingredients|il vous faut|liste):?$/i];
-  const stepKeywords = [/^(préparation|étape|instruction|recette|instructions):?$/i];
+  const ingredientKeywords = [
+    /^(ingrédient|ingredients|il vous faut|liste):?$/i,
+  ];
+  const stepKeywords = [
+    /^(préparation|étape|instruction|recette|instructions):?$/i,
+  ];
 
-  const addIngredient = (line: string) => ingredients.push(parseIngredientLine(line));
+  const addIngredient = (line: string) =>
+    ingredients.push(parseIngredientLine(line));
 
   // Small recipes with less than 5 lines are treated as steps
   if (lines.length < 5) {
@@ -145,7 +190,7 @@ export const parseRecipe = (input: string, slug?: string): Recipe => {
       } else if (currentSection === 'steps') {
         line = cleanStepText(line);
         if (line.match(/^\d+\./) || steps.length === 0) steps.push(line);
-        else steps[steps.length - 1] += " " + line;
+        else steps[steps.length - 1] += ' ' + line;
       } else {
         if (line.startsWith('-') || line.startsWith('•')) {
           addIngredient(line);
@@ -157,11 +202,13 @@ export const parseRecipe = (input: string, slug?: string): Recipe => {
     }
   }
 
-  if (steps.length === 0) steps = ["Ajoutez vos instructions ici."];
+  if (steps.length === 0) steps = ['Ajoutez vos instructions ici.'];
   return { title, ingredients, steps, slug };
 };
 
-export const formatMealieToText = (mealieRecipe: MealieRecipeDetail): string => {
+export const formatMealieToText = (
+  mealieRecipe: MealieRecipeDetail,
+): string => {
   let text = `${mealieRecipe.name}\n\n`;
 
   text += `Ingrédients:\n`;
@@ -175,7 +222,8 @@ export const formatMealieToText = (mealieRecipe: MealieRecipeDetail): string => 
       const parts = [];
       if (ing.quantity) parts.push(ing.quantity);
       if (ing.unit?.name) parts.push(ing.unit.name);
-      if (ing.food?.name && ing.food.name !== ing.unit?.name) parts.push(ing.food.name);
+      if (ing.food?.name && ing.food.name !== ing.unit?.name)
+        parts.push(ing.food.name);
       line = parts.join(' ');
     }
     text += `- ${line}\n`;

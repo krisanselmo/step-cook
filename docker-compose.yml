@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
     ports:
-      - "3211:3000"
+      - '3211:3000'
 
     # Injection des variables d'environnement
     # Vous pouvez soit les mettre ici, soit utiliser un fichier .env (recommandé)

@@ -1,9 +1,21 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Ingredient, StepParams, Recipe, ModalData, MealieRecipeSummary, MealieRecipeDetail, ThemePlugin } from '@/app/lib/types';
+import {
+  Ingredient,
+  StepParams,
+  Recipe,
+  ModalData,
+  MealieRecipeSummary,
+  MealieRecipeDetail,
+  ThemePlugin,
+} from '@/app/lib/types';
 import { defaultTheme, THEMES } from '@/app/lib/themes';
-import { parseRecipe, extractStepParams, formatMealieToText } from '@/app/lib/utils';
+import {
+  parseRecipe,
+  extractStepParams,
+  formatMealieToText,
+} from '@/app/lib/utils';
 
 export type ViewState = 'input' | 'processing' | 'cooking';
 export type SortOption = 'date' | 'alpha';
@@ -82,7 +94,10 @@ export const useCookingState = (): UseCookingState => {
 
   // Plugin / Theme State
   const [activeThemeId, setActiveThemeId] = useState<string>('default');
-  const theme = useMemo(() => THEMES.find(t => t.id === activeThemeId) || defaultTheme, [activeThemeId]);
+  const theme = useMemo(
+    () => THEMES.find(t => t.id === activeThemeId) || defaultTheme,
+    [activeThemeId],
+  );
 
   const [mealieRecipes, setMealieRecipes] = useState<MealieRecipeSummary[]>([]);
   const [isMealieLoading, setIsMealieLoading] = useState<boolean>(false);
@@ -93,7 +108,11 @@ export const useCookingState = (): UseCookingState => {
 
   // Modals
   const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [modalData, setModalData] = useState<ModalData>({ ingredient: '', suggestion: '', loading: false });
+  const [modalData, setModalData] = useState<ModalData>({
+    ingredient: '',
+    suggestion: '',
+    loading: false,
+  });
 
   // Cooked Modal State
   const [cookedModalOpen, setCookedModalOpen] = useState<boolean>(false);
@@ -102,32 +121,50 @@ export const useCookingState = (): UseCookingState => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadSuccess, setUploadSuccess] = useState<boolean>(false);
 
-  const [stepParams, setStepParams] = useState<StepParams>({ time: '--:--', temp: '---', speed: '---', seconds: 0, reverse: false });
+  const [stepParams, setStepParams] = useState<StepParams>({
+    time: '--:--',
+    temp: '---',
+    speed: '---',
+    seconds: 0,
+    reverse: false,
+  });
   const [stepIngredients, setStepIngredients] = useState<Ingredient[]>([]);
 
-  const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(new Set());
+  const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(
+    new Set(),
+  );
   const [isGeminiMode, setIsGeminiMode] = useState<boolean>(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const t = (darkClass: string, lightClass: string) => isDarkMode ? darkClass : lightClass;
+  const t = (darkClass: string, lightClass: string) =>
+    isDarkMode ? darkClass : lightClass;
 
   const filteredRecipes = useMemo(() => {
     let result = [...mealieRecipes];
     if (searchTerm.trim()) {
       const lowerTerm = searchTerm.toLowerCase();
-      result = result.filter(r =>
-        r.name.toLowerCase().includes(lowerTerm) ||
-        (r.description && r.description.toLowerCase().includes(lowerTerm))
+      result = result.filter(
+        r =>
+          r.name.toLowerCase().includes(lowerTerm) ||
+          (r.description && r.description.toLowerCase().includes(lowerTerm)),
       );
     }
-    result.sort((a, b) => sortOption === 'alpha' ? a.name.localeCompare(b.name) : 0);
+    result.sort((a, b) =>
+      sortOption === 'alpha' ? a.name.localeCompare(b.name) : 0,
+    );
     return result;
   }, [mealieRecipes, searchTerm, sortOption]);
 
   useEffect(() => {
-    const updateClock = () => setCurrentTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+    const updateClock = () =>
+      setCurrentTime(
+        new Date().toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      );
     updateClock();
     const interval = setInterval(updateClock, 60000);
     fetchMealieRecipes();
@@ -150,7 +187,7 @@ export const useCookingState = (): UseCookingState => {
       const data = await res.json();
       setMealieRecipes(data);
     } catch (err) {
-      setMealieError("Impossible de charger les recettes Mealie.");
+      setMealieError('Impossible de charger les recettes Mealie.');
       console.error(err);
     } finally {
       setIsMealieLoading(false);
@@ -178,13 +215,16 @@ export const useCookingState = (): UseCookingState => {
     } catch (err) {
       console.error(err);
       setView('input');
-      alert("Erreur lors du chargement : " + (err instanceof Error ? err.message : String(err)));
+      alert(
+        'Erreur lors du chargement : ' +
+          (err instanceof Error ? err.message : String(err)),
+      );
     }
   };
 
   const openMealiePage = () => {
     if (recipe && recipe.slug) {
-      const baseUrl = "https://mealie.christopheanselmo.org/g/home";
+      const baseUrl = 'https://mealie.christopheanselmo.org/g/home';
       window.open(`${baseUrl}/r/${recipe.slug}`, '_blank');
     }
   };
@@ -203,19 +243,32 @@ export const useCookingState = (): UseCookingState => {
         setIsTimerRunning(false);
       }
 
-      const matchedIngredients = recipe.ingredients.filter(ing =>
-        ing.keywords.length > 0 && ing.keywords.some(keyword => stepText.toLowerCase().includes(keyword))
+      const matchedIngredients = recipe.ingredients.filter(
+        ing =>
+          ing.keywords.length > 0 &&
+          ing.keywords.some(keyword =>
+            stepText.toLowerCase().includes(keyword),
+          ),
       );
       setStepIngredients(matchedIngredients);
     } else {
-      setStepParams({ time: '--:--', temp: '---', speed: '---', seconds: 0, reverse: false });
+      setStepParams({
+        time: '--:--',
+        temp: '---',
+        speed: '---',
+        seconds: 0,
+        reverse: false,
+      });
       setStepIngredients([]);
     }
   }, [currentStep, recipe]);
 
   useEffect(() => {
     if (isTimerRunning && timer > 0) {
-      timerRef.current = setInterval(() => setTimer(t => t > 0 ? t - 1 : 0), 1000);
+      timerRef.current = setInterval(
+        () => setTimer(t => (t > 0 ? t - 1 : 0)),
+        1000,
+      );
     } else if (timer === 0) {
       setIsTimerRunning(false);
     }
@@ -243,7 +296,11 @@ export const useCookingState = (): UseCookingState => {
   // --- Handlers IA ---
   const openGeminiModal = async (ingredientFullText: string) => {
     setModalOpen(true);
-    setModalData({ ingredient: ingredientFullText, suggestion: '', loading: true });
+    setModalData({
+      ingredient: ingredientFullText,
+      suggestion: '',
+      loading: true,
+    });
 
     try {
       const response = await fetch('/api/substitute', {
@@ -252,10 +309,18 @@ export const useCookingState = (): UseCookingState => {
         body: JSON.stringify({ ingredient: ingredientFullText }),
       });
       const data = await response.json();
-      setModalData({ ingredient: ingredientFullText, suggestion: data.suggestion, loading: false });
+      setModalData({
+        ingredient: ingredientFullText,
+        suggestion: data.suggestion,
+        loading: false,
+      });
     } catch (error) {
       console.error(error);
-      setModalData({ ingredient: ingredientFullText, suggestion: "Erreur IA.", loading: false });
+      setModalData({
+        ingredient: ingredientFullText,
+        suggestion: 'Erreur IA.',
+        loading: false,
+      });
     }
   };
 
@@ -283,10 +348,12 @@ export const useCookingState = (): UseCookingState => {
     } catch (err) {
       console.error(err);
       setView('input');
-      alert("Erreur lors de la génération de recette par Gemini : " + (err instanceof Error ? err.message : String(err)));
+      alert(
+        'Erreur lors de la génération de recette par Gemini : ' +
+          (err instanceof Error ? err.message : String(err)),
+      );
     }
   };
-
 
   const handleIngredientAction = (ingredientFullText: string) => {
     if (isGeminiMode) {
@@ -342,8 +409,11 @@ export const useCookingState = (): UseCookingState => {
         setPreviewUrl(null);
       }, 2000);
     } catch (error) {
-      console.error("Erreur upload:", error);
-      alert("Erreur lors de l'envoi : " + (error instanceof Error ? error.message : String(error)));
+      console.error('Erreur upload:', error);
+      alert(
+        "Erreur lors de l'envoi : " +
+          (error instanceof Error ? error.message : String(error)),
+      );
     } finally {
       setIsUploading(false);
     }
