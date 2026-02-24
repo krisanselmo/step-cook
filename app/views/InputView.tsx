@@ -88,7 +88,7 @@ export const InputView: React.FC<InputViewProps> = ({
         {' '}
       </div>
 
-      <div className="max-w-5xl w-full flex flex-col h-[90vh] gap-6">
+      <div className="w-full flex flex-col h-[90vh] gap-6">
         <div className="text-center shrink-0">
           <ThemeIcon
             className={`w-12 h-12 ${theme.colors.accent} mx-auto mb-2`}
