@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { promises as fs } from 'fs';
 import path from 'path';
+import {PROMPT} from "@/app/api/gemini/prompt";
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,25 +28,7 @@ export async function POST(req: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: modelName });
 
-    const prePromptPath = path.join(
-      process.cwd(),
-      'private',
-      'gemini-preprompt.txt',
-    );
-    let prePrompt = '';
-
-    try {
-      prePrompt = await fs.readFile(prePromptPath, 'utf8');
-    } catch (readError) {
-      console.error('Error reading pre-prompt file:', readError);
-
-      return NextResponse.json(
-        { error: 'Failed to load Gemini pre-prompt.' },
-        { status: 500 },
-      );
-    }
-
-    const fullPrompt = `${prePrompt}\n\nDirective utilisateur: "${userPrompt}"\n\nRecette générée:`;
+    const fullPrompt = `${PROMPT}\n\nDirective utilisateur: "${userPrompt}"\n\nRecette générée:`;
 
     const result = await model.generateContent(fullPrompt);
     const response = await result.response;

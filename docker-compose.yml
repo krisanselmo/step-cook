@@ -27,10 +27,6 @@ services:
       # Surcharge possible si pas dans le .env
       # - GEMINI_MODEL_NAME=gemini-2.5-flash
 
-    volumes:
-      # Montage du dossier 'private' pour le prompt Gemini
-      - ./private:/app/private
-
     # Limites de ressources (Conseillé pour un Pi 3 avec 1Go de RAM)
     deploy:
       resources:
