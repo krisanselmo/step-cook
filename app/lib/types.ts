@@ -23,12 +23,20 @@ export interface Recipe {
   steps: string[];
   slug?: string;
   orgURL?: string;
+  firestoreId?: string;
 }
 
-export interface ModalData {
-  ingredient: string;
-  suggestion: string;
-  loading: boolean;
+export interface SavedRecipeSummary {
+  id: string;
+  title: string;
+  description?: string;
+  createdAt: string;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  changes?: string[];
 }
 
 export interface MealieRecipeSummary {

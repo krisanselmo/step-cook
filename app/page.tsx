@@ -31,10 +31,12 @@ export default function Home() {
     setSearchTerm,
     sortOption,
     setSortOption,
-    modalOpen,
-    setModalOpen,
-    modalData,
-    setModalData,
+    chatOpen,
+    setChatOpen,
+    chatMessages,
+    isChatLoading,
+    sendChatMessage,
+    saveChatRecipe,
     cookedModalOpen,
     setCookedModalOpen,
     selectedImage,
@@ -49,21 +51,23 @@ export default function Home() {
     stepIngredients,
     checkedIngredients,
     setCheckedIngredients,
-    isGeminiMode,
-    setIsGeminiMode,
     fileInputRef,
     t,
-    filteredRecipes,
     fetchMealieRecipes,
     loadMealieRecipe,
     openMealiePage,
     formatTime,
     handleProcess,
-    openGeminiModal,
     handleIngredientAction,
     handleFileChange,
     handleUpload,
     generateGeminiRecipe,
+    savedRecipes,
+    isSavedLoading,
+    savedError,
+    fetchSavedRecipes,
+    loadSavedRecipe,
+    deleteSavedRecipe,
   } = useCookingState();
 
   switch (view) {
@@ -80,7 +84,6 @@ export default function Home() {
           setSearchTerm={setSearchTerm}
           sortOption={sortOption}
           setSortOption={setSortOption}
-          filteredRecipes={filteredRecipes}
           fetchMealieRecipes={fetchMealieRecipes}
           loadMealieRecipe={loadMealieRecipe}
           isDarkMode={isDarkMode}
@@ -89,6 +92,12 @@ export default function Home() {
           setActiveThemeId={setActiveThemeId}
           t={t}
           handleGeminiGenerate={generateGeminiRecipe}
+          savedRecipes={savedRecipes}
+          isSavedLoading={isSavedLoading}
+          savedError={savedError}
+          fetchSavedRecipes={fetchSavedRecipes}
+          loadSavedRecipe={loadSavedRecipe}
+          deleteSavedRecipe={deleteSavedRecipe}
         />
       );
     case 'processing':
@@ -110,10 +119,12 @@ export default function Home() {
           setIsDarkMode={setIsDarkMode}
           theme={theme}
           setActiveThemeId={setActiveThemeId}
-          modalOpen={modalOpen}
-          setModalOpen={setModalOpen}
-          modalData={modalData}
-          setModalData={setModalData}
+          chatOpen={chatOpen}
+          setChatOpen={setChatOpen}
+          chatMessages={chatMessages}
+          isChatLoading={isChatLoading}
+          sendChatMessage={sendChatMessage}
+          saveChatRecipe={saveChatRecipe}
           cookedModalOpen={cookedModalOpen}
           setCookedModalOpen={setCookedModalOpen}
           selectedImage={selectedImage}
@@ -128,13 +139,10 @@ export default function Home() {
           stepIngredients={stepIngredients}
           checkedIngredients={checkedIngredients}
           setCheckedIngredients={setCheckedIngredients}
-          isGeminiMode={isGeminiMode}
-          setIsGeminiMode={setIsGeminiMode}
           fileInputRef={fileInputRef}
           t={t}
           openMealiePage={openMealiePage}
           formatTime={formatTime}
-          openGeminiModal={openGeminiModal}
           handleIngredientAction={handleIngredientAction}
           handleFileChange={handleFileChange}
           handleUpload={handleUpload}

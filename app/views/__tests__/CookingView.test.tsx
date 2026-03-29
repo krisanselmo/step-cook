@@ -49,18 +49,17 @@ describe('CookingView', () => {
   let mockSetIsTimerRunning: jest.Mock;
   let mockSetIsDarkMode: jest.Mock;
   let mockSetActiveThemeId: jest.Mock;
-  let mockSetModalOpen: jest.Mock;
-  let mockSetModalData: jest.Mock;
+  let mockSetChatOpen: jest.Mock;
+  let mockSendChatMessage: jest.Mock;
+  let mockSaveChatRecipe: jest.Mock;
   let mockSetCookedModalOpen: jest.Mock;
   let mockSetSelectedImage: jest.Mock;
   let mockSetPreviewUrl: jest.Mock;
   let mockSetIsUploading: jest.Mock;
   let mockSetUploadSuccess: jest.Mock;
   let mockSetCheckedIngredients: jest.Mock;
-  let mockSetIsGeminiMode: jest.Mock;
   let mockOpenMealiePage: jest.Mock;
   let mockFormatTime: jest.Mock;
-  let mockOpenGeminiModal: jest.Mock;
   let mockHandleIngredientAction: jest.Mock;
   let mockHandleFileChange: jest.Mock;
   let mockHandleUpload: jest.Mock; // Fixed type here
@@ -74,15 +73,15 @@ describe('CookingView', () => {
     mockSetIsTimerRunning = jest.fn();
     mockSetIsDarkMode = jest.fn();
     mockSetActiveThemeId = jest.fn();
-    mockSetModalOpen = jest.fn();
-    mockSetModalData = jest.fn();
+    mockSetChatOpen = jest.fn();
+    mockSendChatMessage = jest.fn();
+    mockSaveChatRecipe = jest.fn();
     mockSetCookedModalOpen = jest.fn();
     mockSetSelectedImage = jest.fn();
     mockSetPreviewUrl = jest.fn();
     mockSetIsUploading = jest.fn();
     mockSetUploadSuccess = jest.fn();
     mockSetCheckedIngredients = jest.fn();
-    mockSetIsGeminiMode = jest.fn();
     mockOpenMealiePage = jest.fn();
     mockFormatTime = jest.fn((seconds: number) => {
       const m = Math.floor(seconds / 60);
@@ -90,7 +89,6 @@ describe('CookingView', () => {
 
       return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     });
-    mockOpenGeminiModal = jest.fn();
     mockHandleIngredientAction = jest.fn();
     mockHandleFileChange = jest.fn();
     mockHandleUpload = jest.fn();
@@ -134,10 +132,12 @@ describe('CookingView', () => {
         },
       },
       setActiveThemeId: mockSetActiveThemeId,
-      modalOpen: false,
-      setModalOpen: mockSetModalOpen,
-      modalData: { ingredient: '', suggestion: '', loading: false },
-      setModalData: mockSetModalData,
+      chatOpen: false,
+      setChatOpen: mockSetChatOpen,
+      chatMessages: [],
+      isChatLoading: false,
+      sendChatMessage: mockSendChatMessage,
+      saveChatRecipe: mockSaveChatRecipe,
       cookedModalOpen: false,
       setCookedModalOpen: mockSetCookedModalOpen,
       selectedImage: null,
@@ -152,15 +152,12 @@ describe('CookingView', () => {
       stepIngredients: [],
       checkedIngredients: new Set(),
       setCheckedIngredients: mockSetCheckedIngredients,
-      isGeminiMode: false,
-      setIsGeminiMode: mockSetIsGeminiMode,
       fileInputRef: { current: null },
       t: jest.fn((darkClass: string, lightClass: string) =>
         baseProps.isDarkMode ? darkClass : lightClass,
       ),
       openMealiePage: mockOpenMealiePage,
       formatTime: mockFormatTime,
-      openGeminiModal: mockOpenGeminiModal,
       handleIngredientAction: mockHandleIngredientAction,
       handleFileChange: mockHandleFileChange,
       handleUpload: mockHandleUpload,
@@ -208,15 +205,6 @@ describe('CookingView', () => {
       expect(mockHandleIngredientAction).toHaveBeenCalledWith('2 Sugar');
     });
 
-    it('calls openGeminiModal when ingredient is clicked and in Gemini mode', () => {
-      render(
-        <CookingView
-          {...getMockedDefaultProps({ currentStep: -1, isGeminiMode: true })}
-        />,
-      );
-      fireEvent.click(screen.getByText('1 Egg'));
-      expect(mockOpenGeminiModal).toHaveBeenCalledWith('1 Egg');
-    });
   });
 
   describe('Active Step Mode (0 to recipe.steps.length - 1)', () => {
@@ -290,7 +278,6 @@ describe('CookingView', () => {
     it('renders the "Recette Terminée !" message', () => {
       render(<CookingView {...finishedProps} />);
       expect(screen.getByText(/Recette Terminée/i)).toBeInTheDocument();
-      expect(screen.getByText('Bravo ! 🎉')).toBeInTheDocument(); // From the cooked modal if open
     });
 
     it('navigates to input view when "Autre Recette" is clicked', () => {

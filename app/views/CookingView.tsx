@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Play,
   Pause,
@@ -12,7 +12,6 @@ import {
   ChevronRight,
   ChevronLeft,
   ChevronDown,
-  Scale,
   Wheat,
   Zap,
   Sun,
@@ -29,6 +28,8 @@ import {
   Flame,
   Timer,
   ListOrdered,
+  Send,
+  Save,
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/Button';
 import { ThemeDropdown } from '@/app/components/ui/ThemeDropdown';
@@ -49,10 +50,12 @@ interface CookingViewProps {
   setIsDarkMode: ReturnType<typeof useCookingState>['setIsDarkMode'];
   theme: ReturnType<typeof useCookingState>['theme'];
   setActiveThemeId: ReturnType<typeof useCookingState>['setActiveThemeId'];
-  modalOpen: ReturnType<typeof useCookingState>['modalOpen'];
-  setModalOpen: ReturnType<typeof useCookingState>['setModalOpen'];
-  modalData: ReturnType<typeof useCookingState>['modalData'];
-  setModalData: ReturnType<typeof useCookingState>['setModalData'];
+  chatOpen: ReturnType<typeof useCookingState>['chatOpen'];
+  setChatOpen: ReturnType<typeof useCookingState>['setChatOpen'];
+  chatMessages: ReturnType<typeof useCookingState>['chatMessages'];
+  isChatLoading: ReturnType<typeof useCookingState>['isChatLoading'];
+  sendChatMessage: ReturnType<typeof useCookingState>['sendChatMessage'];
+  saveChatRecipe: ReturnType<typeof useCookingState>['saveChatRecipe'];
   cookedModalOpen: ReturnType<typeof useCookingState>['cookedModalOpen'];
   setCookedModalOpen: ReturnType<typeof useCookingState>['setCookedModalOpen'];
   selectedImage: ReturnType<typeof useCookingState>['selectedImage'];
@@ -69,13 +72,10 @@ interface CookingViewProps {
   setCheckedIngredients: ReturnType<
     typeof useCookingState
   >['setCheckedIngredients'];
-  isGeminiMode: ReturnType<typeof useCookingState>['isGeminiMode'];
-  setIsGeminiMode: ReturnType<typeof useCookingState>['setIsGeminiMode'];
   fileInputRef: ReturnType<typeof useCookingState>['fileInputRef'];
   t: ReturnType<typeof useCookingState>['t'];
   openMealiePage: ReturnType<typeof useCookingState>['openMealiePage'];
   formatTime: ReturnType<typeof useCookingState>['formatTime'];
-  openGeminiModal: ReturnType<typeof useCookingState>['openGeminiModal'];
   handleIngredientAction: ReturnType<
     typeof useCookingState
   >['handleIngredientAction'];
@@ -96,9 +96,12 @@ export const CookingView: React.FC<CookingViewProps> = ({
   setIsDarkMode,
   theme,
   setActiveThemeId,
-  modalOpen,
-  setModalOpen,
-  modalData,
+  chatOpen,
+  setChatOpen,
+  chatMessages,
+  isChatLoading,
+  sendChatMessage,
+  saveChatRecipe,
   cookedModalOpen,
   setCookedModalOpen,
   selectedImage,
@@ -110,8 +113,6 @@ export const CookingView: React.FC<CookingViewProps> = ({
   stepParams,
   stepIngredients,
   checkedIngredients,
-  isGeminiMode,
-  setIsGeminiMode,
   fileInputRef,
   t,
   openMealiePage,
@@ -176,11 +177,10 @@ export const CookingView: React.FC<CookingViewProps> = ({
               <Globe size={16} />
             </a>
           )}
-          {/* Toggles */}
           <button
-            onClick={() => setIsGeminiMode(!isGeminiMode)}
-            className={`transition-colors ${isGeminiMode ? 'text-purple-500' : t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}
-            title="Assistant IA Gemini"
+            onClick={() => setChatOpen(true)}
+            className={`transition-colors ${chatOpen ? 'text-purple-500' : t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}
+            title="Assistant IA"
           >
             <Sparkles size={16} />
           </button>
@@ -257,7 +257,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
                     key={i}
                     onClick={() => handleIngredientAction(ing.fullText)}
                     className={`flex w-full items-center gap-4 text-left p-3 ${theme.properties.radius} transition-all ${
-                      isChecked && !isGeminiMode
+                      isChecked
                         ? t(
                             theme.colors.checkedBgDark,
                             theme.colors.checkedBgLight,
@@ -268,23 +268,17 @@ export const CookingView: React.FC<CookingViewProps> = ({
                           )
                     }`}
                   >
-                    {isGeminiMode ? (
-                      <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
-                        <Sparkles size={16} className="text-purple-500" />
-                      </div>
-                    ) : (
-                      <div
-                        className={`w-6 h-6 border-2 flex items-center justify-center shrink-0 transition-colors ${theme.properties.radius} ${
-                          isChecked
-                            ? `${theme.colors.bgPrimary} ${theme.colors.borderAccent} text-white`
-                            : t('border-gray-600', 'border-gray-300')
-                        }`}
-                      >
-                        {isChecked && <Check size={14} strokeWidth={3} />}
-                      </div>
-                    )}
+                    <div
+                      className={`w-6 h-6 border-2 flex items-center justify-center shrink-0 transition-colors ${theme.properties.radius} ${
+                        isChecked
+                          ? `${theme.colors.bgPrimary} ${theme.colors.borderAccent} text-white`
+                          : t('border-gray-600', 'border-gray-300')
+                      }`}
+                    >
+                      {isChecked && <Check size={14} strokeWidth={3} />}
+                    </div>
                     <span
-                      className={`text-lg leading-snug transition-all ${isChecked && !isGeminiMode ? 'line-through opacity-60' : ''}`}
+                      className={`text-lg leading-snug transition-all ${isChecked ? 'line-through opacity-60' : ''}`}
                     >
                       {ing.fullText}
                     </span>
@@ -469,33 +463,22 @@ export const CookingView: React.FC<CookingViewProps> = ({
                         key={i}
                         onClick={() => handleIngredientAction(ing.fullText)}
                         className={`px-4 py-2 ${theme.properties.radius} flex items-center gap-2 border transition-all hover:scale-105 active:scale-95 ${
-                          isGeminiMode
+                          isChecked
                             ? t(
-                                'bg-purple-900/20 border-purple-500/30 text-purple-300',
-                                'bg-purple-50 border-purple-200 text-purple-700',
+                                theme.colors.checkedBgDark,
+                                theme.colors.checkedBgLight,
+                              ) + ' opacity-60 line-through'
+                            : t(
+                                'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700',
+                                'bg-white border-gray-200 text-gray-700 shadow-sm hover:bg-gray-50',
                               )
-                            : isChecked
-                              ? t(
-                                  theme.colors.checkedBgDark,
-                                  theme.colors.checkedBgLight,
-                                ) + ' opacity-60 line-through'
-                              : t(
-                                  'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700',
-                                  'bg-white border-gray-200 text-gray-700 shadow-sm hover:bg-gray-50',
-                                )
                         }`}
                       >
-                        {isGeminiMode ? (
-                          <Sparkles size={14} className="text-purple-500" />
-                        ) : isChecked ? (
-                          <Check
-                            size={14}
-                            className={theme.colors.accent}
-                            strokeWidth={3}
-                          />
-                        ) : (
-                          <Scale size={14} className="text-gray-400" />
-                        )}
+                        <Check
+                          size={14}
+                          strokeWidth={3}
+                          className={isChecked ? theme.colors.accent : 'text-gray-400 opacity-30'}
+                        />
                         <span className="text-sm font-medium">
                           {ing.fullText}
                         </span>
@@ -536,72 +519,17 @@ export const CookingView: React.FC<CookingViewProps> = ({
           </button>
         </div>
 
-        {/* Modal IA */}
-        {modalOpen && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-            <div
-              className={`w-full max-w-sm p-6 ${theme.properties.radius} shadow-2xl relative ${t('bg-gray-900 border border-gray-700 text-white', 'bg-white border border-gray-200 text-gray-900')}`}
-            >
-              <button
-                onClick={() => setModalOpen(false)}
-                className={`absolute top-4 right-4 p-2 rounded-full ${t('hover:bg-gray-800', 'hover:bg-gray-100')}`}
-              >
-                <X size={20} />
-              </button>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white">
-                  <Sparkles size={20} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">Gemini</h3>
-                  <p
-                    className={`text-xs ${t('text-gray-400', 'text-gray-500')}`}
-                  >
-                    Assistant Culinaire
-                  </p>
-                </div>
-              </div>
-              <div className="min-h-[120px] flex flex-col justify-center">
-                {modalData.loading ? (
-                  <div className="flex flex-col items-center gap-3 text-gray-400">
-                    <Sparkles
-                      className="animate-spin text-purple-500"
-                      size={24}
-                    />
-                    <span className="text-sm">
-                      Analyse de {modalData.ingredient}...
-                    </span>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <p
-                        className={`text-xs uppercase font-bold tracking-wider mb-1 ${t('text-gray-500', 'text-gray-400')}`}
-                      >
-                        Ingrédient
-                      </p>
-                      <p className="text-xl font-medium">
-                        {modalData.ingredient}
-                      </p>
-                    </div>
-                    <div
-                      className={`p-4 rounded-xl ${t('bg-gray-800/50', 'bg-gray-50')}`}
-                    >
-                      <p
-                        className={`text-xs uppercase font-bold tracking-wider mb-2 ${t('text-purple-400', 'text-purple-600')}`}
-                      >
-                        Suggestion de remplacement
-                      </p>
-                      <p className="text-sm leading-relaxed">
-                        {modalData.suggestion}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Chat IA Panel */}
+        {chatOpen && <ChatPanel
+          chatMessages={chatMessages}
+          isChatLoading={isChatLoading}
+          sendChatMessage={sendChatMessage}
+          saveChatRecipe={saveChatRecipe}
+          canSave={!!recipe.firestoreId}
+          onClose={() => setChatOpen(false)}
+          theme={theme}
+          t={t}
+        />}
 
         {/* Modal "Je l'ai cuisiné" (Upload) */}
         {cookedModalOpen && (
@@ -701,6 +629,132 @@ export const CookingView: React.FC<CookingViewProps> = ({
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+// --- Chat Panel Component ---
+import { ChatMessage, ThemePlugin } from '@/app/lib/types';
+
+interface ChatPanelProps {
+  chatMessages: ChatMessage[];
+  isChatLoading: boolean;
+  sendChatMessage: (message: string) => Promise<void>;
+  saveChatRecipe: () => Promise<void>;
+  canSave: boolean;
+  onClose: () => void;
+  theme: ThemePlugin;
+  t: (dark: string, light: string) => string;
+}
+
+const ChatPanel: React.FC<ChatPanelProps> = ({
+  chatMessages,
+  isChatLoading,
+  sendChatMessage,
+  saveChatRecipe,
+  canSave,
+  onClose,
+  theme,
+  t,
+}) => {
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, isChatLoading]);
+
+  const handleSend = () => {
+    if (!input.trim() || isChatLoading) return;
+    sendChatMessage(input.trim());
+    setInput('');
+  };
+
+  return (
+    <div className="absolute inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-sm animate-in fade-in">
+      <div className={`flex-1 flex flex-col max-w-lg mx-auto w-full ${theme.properties.radius} overflow-hidden ${t('bg-gray-900', 'bg-white')} m-4 shadow-2xl border ${t('border-gray-700', 'border-gray-200')}`}>
+        {/* Header */}
+        <div className={`flex items-center gap-3 p-4 border-b ${t('border-gray-800', 'border-gray-100')}`}>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white shrink-0">
+            <Sparkles size={16} />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-sm">Assistant IA</h3>
+            <p className={`text-xs ${t('text-gray-500', 'text-gray-400')}`}>Modifier la recette</p>
+          </div>
+          <button onClick={onClose} className={`p-2 rounded-full ${t('hover:bg-gray-800', 'hover:bg-gray-100')}`}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {chatMessages.length === 0 && (
+            <p className={`text-sm text-center py-8 ${t('text-gray-600', 'text-gray-400')}`}>
+              Demandez une modification, ex: &quot;Remplace le beurre par de l&apos;huile d&apos;olive&quot;
+            </p>
+          )}
+          {chatMessages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] px-3 py-2 ${theme.properties.radius} text-sm ${
+                msg.role === 'user'
+                  ? `${theme.colors.bgPrimary} text-white`
+                  : t('bg-gray-800 text-gray-200', 'bg-gray-100 text-gray-800')
+              }`}>
+                <p>{msg.content}</p>
+                {msg.changes && msg.changes.length > 0 && (
+                  <ul className={`mt-2 space-y-1 text-xs ${t('text-gray-400', 'text-gray-500')}`}>
+                    {msg.changes.map((change, j) => (
+                      <li key={j} className="flex gap-1.5">
+                        <span className="shrink-0">-</span>
+                        <span>{change}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          ))}
+          {isChatLoading && (
+            <div className="flex justify-start">
+              <div className={`px-3 py-2 ${theme.properties.radius} ${t('bg-gray-800', 'bg-gray-100')}`}>
+                <Loader2 size={16} className="animate-spin text-purple-500" />
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Footer */}
+        <div className={`p-3 border-t ${t('border-gray-800', 'border-gray-100')} space-y-2`}>
+          {canSave && (
+            <button
+              onClick={saveChatRecipe}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium ${theme.properties.radius} transition-colors ${t('bg-green-900/30 text-green-400 hover:bg-green-900/50 border border-green-800', 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200')}`}
+            >
+              <Save size={14} /> Sauvegarder les modifications
+            </button>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+              placeholder="Modifier la recette..."
+              disabled={isChatLoading}
+              className={`flex-1 px-3 py-2 text-sm ${theme.properties.radius} border outline-none ${t('bg-gray-800 border-gray-700 text-white placeholder:text-gray-500', 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400')}`}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || isChatLoading}
+              className={`px-3 py-2 ${theme.properties.radius} ${theme.colors.bgPrimary} text-white disabled:opacity-40 transition-opacity`}
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

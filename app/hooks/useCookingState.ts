@@ -5,11 +5,13 @@ import {
   Ingredient,
   StepParams,
   Recipe,
-  ModalData,
+  ChatMessage,
   MealieRecipeSummary,
   MealieRecipeDetail,
+  SavedRecipeSummary,
   ThemePlugin,
 } from '@/app/lib/types';
+import { parseIngredientLine } from '@/app/lib/utils';
 import { defaultTheme, THEMES } from '@/app/lib/themes';
 import {
   parseRecipe,
@@ -19,7 +21,7 @@ import {
 } from '@/app/lib/utils';
 
 export type ViewState = 'input' | 'processing' | 'cooking';
-export type SortOption = 'date' | 'alpha';
+export type SortOption = 'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc';
 
 interface UseCookingState {
   view: ViewState;
@@ -47,10 +49,12 @@ interface UseCookingState {
   setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
   sortOption: SortOption;
   setSortOption: React.Dispatch<React.SetStateAction<SortOption>>;
-  modalOpen: boolean;
-  setModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  modalData: ModalData;
-  setModalData: React.Dispatch<React.SetStateAction<ModalData>>;
+  chatOpen: boolean;
+  setChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  chatMessages: ChatMessage[];
+  isChatLoading: boolean;
+  sendChatMessage: (message: string) => Promise<void>;
+  saveChatRecipe: () => Promise<void>;
   cookedModalOpen: boolean;
   setCookedModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   selectedImage: File | null;
@@ -65,22 +69,24 @@ interface UseCookingState {
   stepIngredients: Ingredient[];
   checkedIngredients: Set<string>;
   setCheckedIngredients: React.Dispatch<React.SetStateAction<Set<string>>>;
-  isGeminiMode: boolean;
-  setIsGeminiMode: React.Dispatch<React.SetStateAction<boolean>>;
   timerRef: React.MutableRefObject<NodeJS.Timeout | null>;
   fileInputRef: React.MutableRefObject<HTMLInputElement | null>;
   t: (darkClass: string, lightClass: string) => string;
-  filteredRecipes: MealieRecipeSummary[];
   fetchMealieRecipes: () => Promise<void>;
   loadMealieRecipe: (slug: string) => Promise<void>;
   openMealiePage: () => void;
   formatTime: (seconds: number) => string;
   handleProcess: () => void;
-  openGeminiModal: (ingredientFullText: string) => Promise<void>;
   handleIngredientAction: (ingredientFullText: string) => void;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleUpload: () => Promise<void>;
   generateGeminiRecipe: (userPrompt: string) => Promise<void>;
+  savedRecipes: SavedRecipeSummary[];
+  isSavedLoading: boolean;
+  savedError: string | null;
+  fetchSavedRecipes: () => Promise<void>;
+  loadSavedRecipe: (id: string) => Promise<void>;
+  deleteSavedRecipe: (id: string) => Promise<void>;
 }
 
 export const useCookingState = (): UseCookingState => {
@@ -104,16 +110,17 @@ export const useCookingState = (): UseCookingState => {
   const [isMealieLoading, setIsMealieLoading] = useState<boolean>(false);
   const [mealieError, setMealieError] = useState<string | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [sortOption, setSortOption] = useState<SortOption>('date');
+  const [savedRecipes, setSavedRecipes] = useState<SavedRecipeSummary[]>([]);
+  const [isSavedLoading, setIsSavedLoading] = useState<boolean>(false);
+  const [savedError, setSavedError] = useState<string | null>(null);
 
-  // Modals
-  const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [modalData, setModalData] = useState<ModalData>({
-    ingredient: '',
-    suggestion: '',
-    loading: false,
-  });
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [sortOption, setSortOption] = useState<SortOption>('date-desc');
+
+  // Chat IA
+  const [chatOpen, setChatOpen] = useState<boolean>(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
 
   // Cooked Modal State
   const [cookedModalOpen, setCookedModalOpen] = useState<boolean>(false);
@@ -134,31 +141,12 @@ export const useCookingState = (): UseCookingState => {
   const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(
     new Set(),
   );
-  const [isGeminiMode, setIsGeminiMode] = useState<boolean>(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const t = (darkClass: string, lightClass: string) =>
     isDarkMode ? darkClass : lightClass;
-
-  const filteredRecipes = useMemo(() => {
-    let result = [...mealieRecipes];
-
-    if (searchTerm.trim()) {
-      const lowerTerm = searchTerm.toLowerCase();
-      result = result.filter(
-        r =>
-          r.name.toLowerCase().includes(lowerTerm) ||
-          (r.description && r.description.toLowerCase().includes(lowerTerm)),
-      );
-    }
-    result.sort((a, b) =>
-      sortOption === 'alpha' ? a.name.localeCompare(b.name) : 0,
-    );
-
-    return result;
-  }, [mealieRecipes, searchTerm, sortOption]);
 
   useEffect(() => {
     const updateClock = () =>
@@ -171,6 +159,7 @@ export const useCookingState = (): UseCookingState => {
     updateClock();
     const interval = setInterval(updateClock, 60000);
     fetchMealieRecipes();
+    fetchSavedRecipes();
 
     return () => clearInterval(interval);
   }, []);
@@ -204,6 +193,83 @@ export const useCookingState = (): UseCookingState => {
     }
   };
 
+  const fetchSavedRecipes = async () => {
+    setIsSavedLoading(true);
+    setSavedError(null);
+
+    try {
+      const res = await fetch('/api/firestore/recipes');
+
+      if (!res.ok) {
+        throw new Error('Erreur chargement');
+      }
+      const data = await res.json();
+      setSavedRecipes(data);
+    } catch (err) {
+      setSavedError('Impossible de charger les recettes sauvegardées.');
+      console.error(err);
+    } finally {
+      setIsSavedLoading(false);
+    }
+  };
+
+  const loadSavedRecipe = async (id: string) => {
+    setView('processing');
+
+    try {
+      const res = await fetch(`/api/firestore/recipes/${id}`);
+
+      if (!res.ok) {
+        throw new Error('Erreur chargement recette');
+      }
+
+      const data = await res.json();
+      const loadedRecipe: Recipe = {
+        title: data.title,
+        description: data.description,
+        prepTime: data.prepTime,
+        cookTime: data.cookTime,
+        totalTime: data.totalTime,
+        ingredients: data.ingredients || [],
+        steps: data.steps || [],
+        firestoreId: data.id,
+      };
+
+      setRecipe(loadedRecipe);
+      setCheckedIngredients(new Set());
+      setChatMessages([]);
+      setCurrentStep(-1);
+      setView('cooking');
+    } catch (err) {
+      console.error(err);
+      setView('input');
+      alert(
+        'Erreur lors du chargement : ' +
+          (err instanceof Error ? err.message : String(err)),
+      );
+    }
+  };
+
+  const deleteSavedRecipe = async (id: string) => {
+    try {
+      const res = await fetch(`/api/firestore/recipes/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        throw new Error('Erreur suppression');
+      }
+
+      setSavedRecipes(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      console.error(err);
+      alert(
+        'Erreur lors de la suppression : ' +
+          (err instanceof Error ? err.message : String(err)),
+      );
+    }
+  };
+
   const loadMealieRecipe = async (slug: string) => {
     setView('processing');
 
@@ -228,6 +294,7 @@ export const useCookingState = (): UseCookingState => {
       setTimeout(() => {
         setRecipe(parseRecipe(formattedText, slug, detail.orgURL, metadata));
         setCheckedIngredients(new Set());
+        setChatMessages([]);
         setCurrentStep(-1);
         setView('cooking');
       }, 500);
@@ -312,39 +379,91 @@ export const useCookingState = (): UseCookingState => {
     setTimeout(() => {
       setRecipe(parseRecipe(rawText));
       setCheckedIngredients(new Set());
+      setChatMessages([]);
       setCurrentStep(-1);
       setView('cooking');
     }, 800);
   };
 
-  // --- Handlers IA ---
-  const openGeminiModal = async (ingredientFullText: string) => {
-    setModalOpen(true);
-    setModalData({
-      ingredient: ingredientFullText,
-      suggestion: '',
-      loading: true,
-    });
+  // --- Chat IA ---
+  const sendChatMessage = async (message: string) => {
+    if (!recipe || isChatLoading) return;
+
+    setChatMessages(prev => [...prev, { role: 'user', content: message }]);
+    setIsChatLoading(true);
 
     try {
-      const response = await fetch('/api/substitute', {
+      const res = await fetch('/api/gemini/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredient: ingredientFullText }),
+        body: JSON.stringify({ recipe, message }),
       });
-      const data = await response.json();
-      setModalData({
-        ingredient: ingredientFullText,
-        suggestion: data.suggestion,
-        loading: false,
+
+      if (!res.ok) {
+        throw new Error('Erreur modification');
+      }
+
+      const data = await res.json();
+      const editedRecipe = data.recipe;
+
+      // Rebuild ingredients with keywords
+      const updatedRecipe: Recipe = {
+        ...recipe,
+        title: editedRecipe.title,
+        description: editedRecipe.description,
+        prepTime: editedRecipe.prepTime,
+        cookTime: editedRecipe.cookTime,
+        totalTime: editedRecipe.totalTime,
+        ingredients: Array.isArray(editedRecipe.ingredients)
+          ? editedRecipe.ingredients.map((ing: string) => parseIngredientLine(ing))
+          : recipe.ingredients,
+        steps: editedRecipe.steps || recipe.steps,
+      };
+
+      setRecipe(updatedRecipe);
+      setChatMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'Recette modifiée.',
+          changes: data.changes,
+        },
+      ]);
+    } catch (err) {
+      console.error(err);
+      setChatMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: 'Erreur lors de la modification.' },
+      ]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
+  const saveChatRecipe = async () => {
+    if (!recipe?.firestoreId) return;
+
+    try {
+      const res = await fetch(`/api/firestore/recipes/${recipe.firestoreId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe }),
       });
-    } catch (error) {
-      console.error(error);
-      setModalData({
-        ingredient: ingredientFullText,
-        suggestion: 'Erreur IA.',
-        loading: false,
-      });
+
+      if (!res.ok) {
+        throw new Error('Erreur sauvegarde');
+      }
+
+      setChatMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: 'Recette sauvegardée.' },
+      ]);
+    } catch (err) {
+      console.error(err);
+      alert(
+        'Erreur lors de la sauvegarde : ' +
+          (err instanceof Error ? err.message : String(err)),
+      );
     }
   };
 
@@ -365,11 +484,26 @@ export const useCookingState = (): UseCookingState => {
 
       const data = await res.json();
       const generatedText = data.generatedRecipeText;
-      setRawText(generatedText); // Set rawText for parsing
-      setRecipe(parseRecipe(generatedText));
+      setRawText(generatedText);
+      const parsedRecipe = parseRecipe(generatedText);
+      setRecipe(parsedRecipe);
       setCheckedIngredients(new Set());
+      setChatMessages([]);
       setCurrentStep(-1);
       setView('cooking');
+
+      // Fire-and-forget save to Firestore
+      fetch('/api/firestore/recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe: parsedRecipe, userPrompt }),
+      })
+        .then(r => r.json())
+        .then(saved => {
+          setRecipe(prev => prev ? { ...prev, firestoreId: saved.id } : prev);
+          fetchSavedRecipes();
+        })
+        .catch(err => console.error('Erreur sauvegarde Firestore:', err));
     } catch (err) {
       console.error(err);
       setView('input');
@@ -381,18 +515,14 @@ export const useCookingState = (): UseCookingState => {
   };
 
   const handleIngredientAction = (ingredientFullText: string) => {
-    if (isGeminiMode) {
-      openGeminiModal(ingredientFullText);
-    } else {
-      const newChecked = new Set(checkedIngredients);
+    const newChecked = new Set(checkedIngredients);
 
-      if (newChecked.has(ingredientFullText)) {
-        newChecked.delete(ingredientFullText);
-      } else {
-        newChecked.add(ingredientFullText);
-      }
-      setCheckedIngredients(newChecked);
+    if (newChecked.has(ingredientFullText)) {
+      newChecked.delete(ingredientFullText);
+    } else {
+      newChecked.add(ingredientFullText);
     }
+    setCheckedIngredients(newChecked);
   };
 
   // --- Handlers Upload Photo ---
@@ -475,10 +605,12 @@ export const useCookingState = (): UseCookingState => {
     setSearchTerm,
     sortOption,
     setSortOption,
-    modalOpen,
-    setModalOpen,
-    modalData,
-    setModalData,
+    chatOpen,
+    setChatOpen,
+    chatMessages,
+    isChatLoading,
+    sendChatMessage,
+    saveChatRecipe,
     cookedModalOpen,
     setCookedModalOpen,
     selectedImage,
@@ -493,21 +625,23 @@ export const useCookingState = (): UseCookingState => {
     stepIngredients,
     checkedIngredients,
     setCheckedIngredients,
-    isGeminiMode,
-    setIsGeminiMode,
     timerRef,
     fileInputRef,
     t,
-    filteredRecipes,
     fetchMealieRecipes,
     loadMealieRecipe,
     openMealiePage,
     formatTime,
     handleProcess,
-    openGeminiModal,
     handleIngredientAction,
     handleFileChange,
     handleUpload,
     generateGeminiRecipe,
+    savedRecipes,
+    isSavedLoading,
+    savedError,
+    fetchSavedRecipes,
+    loadSavedRecipe,
+    deleteSavedRecipe,
   };
 };
