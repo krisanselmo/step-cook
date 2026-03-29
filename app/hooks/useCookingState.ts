@@ -218,8 +218,15 @@ export const useCookingState = (): UseCookingState => {
       const formattedText = formatMealieToText(detail);
       setRawText(formattedText);
 
+      const metadata = {
+        description: detail.description,
+        prepTime: detail.prepTime,
+        cookTime: detail.cookTime,
+        totalTime: detail.totalTime || detail.performTime,
+      };
+
       setTimeout(() => {
-        setRecipe(parseRecipe(formattedText, slug, detail.orgURL));
+        setRecipe(parseRecipe(formattedText, slug, detail.orgURL, metadata));
         setCheckedIngredients(new Set());
         setCurrentStep(-1);
         setView('cooking');

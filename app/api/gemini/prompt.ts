@@ -5,6 +5,10 @@ Voici les ustensiles disponibles sur le thermomix : fouet, varoma, panier cuisso
 Voici le schéma JSON attendu :
 {
   "title": "Nom de la recette",
+  "description": "Courte description de la recette (1-2 phrases)",
+  "prepTime": "15 min",
+  "cookTime": "30 min",
+  "totalTime": "45 min",
   "ingredients": [
     "500g de farine",
     "3 oeufs",

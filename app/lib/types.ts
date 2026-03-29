@@ -15,6 +15,10 @@ export interface StepParams {
 
 export interface Recipe {
   title: string;
+  description?: string;
+  prepTime?: string;
+  cookTime?: string;
+  totalTime?: string;
   ingredients: Ingredient[];
   steps: string[];
   slug?: string;
@@ -51,6 +55,11 @@ export interface MealieInstruction {
 export interface MealieRecipeDetail {
   slug?: string;
   name: string;
+  description?: string;
+  prepTime?: string;
+  cookTime?: string;
+  totalTime?: string;
+  performTime?: string;
   recipeIngredient: MealieIngredient[];
   recipeInstructions: MealieInstruction[];
   orgURL?: string;

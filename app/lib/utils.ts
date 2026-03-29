@@ -291,10 +291,18 @@ function corrigerInstructionsThermomix(texte: string): string {
   return texteCorrige.replace(/\s\s+/g, ' ').trim();
 }
 
+export interface RecipeMetadata {
+  description?: string;
+  prepTime?: string;
+  cookTime?: string;
+  totalTime?: string;
+}
+
 export const parseRecipe = (
   input: string,
   slug?: string,
   orgURL?: string,
+  metadata?: RecipeMetadata,
 ): Recipe => {
   try {
     const trimmedInput = input.trim();
@@ -305,6 +313,10 @@ export const parseRecipe = (
       if (jsonRecipe.title && Array.isArray(jsonRecipe.steps)) {
         return {
           title: jsonRecipe.title,
+          description: jsonRecipe.description || metadata?.description,
+          prepTime: jsonRecipe.prepTime || metadata?.prepTime,
+          cookTime: jsonRecipe.cookTime || metadata?.cookTime,
+          totalTime: jsonRecipe.totalTime || metadata?.totalTime,
           ingredients: Array.isArray(jsonRecipe.ingredients)
             ? jsonRecipe.ingredients.map((ing: string) =>
                 parseIngredientLine(ing),
@@ -387,7 +399,17 @@ export const parseRecipe = (
     steps = ['Ajoutez vos instructions ici.'];
   }
 
-  return { title, ingredients, steps, slug, orgURL };
+  return {
+    title,
+    description: metadata?.description,
+    prepTime: metadata?.prepTime,
+    cookTime: metadata?.cookTime,
+    totalTime: metadata?.totalTime,
+    ingredients,
+    steps,
+    slug,
+    orgURL,
+  };
 };
 
 export const formatMealieToText = (

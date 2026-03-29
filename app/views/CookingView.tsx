@@ -11,6 +11,7 @@ import {
   Home as HomeIcon,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Scale,
   Wheat,
   Zap,
@@ -24,6 +25,10 @@ import {
   Camera,
   UploadCloud,
   Globe,
+  Clock,
+  Flame,
+  Timer,
+  ListOrdered,
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/Button';
 import { ThemeDropdown } from '@/app/components/ui/ThemeDropdown';
@@ -200,6 +205,46 @@ export const CookingView: React.FC<CookingViewProps> = ({
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {isOverview ? (
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* KPIs: Temps de prépa, cuisson, total */}
+            {(recipe.prepTime || recipe.cookTime || recipe.totalTime) && (
+              <div className="flex gap-3 flex-wrap">
+                {recipe.prepTime && (
+                  <div className={`flex items-center gap-2 px-3 py-2 ${theme.properties.radius} border ${t('bg-gray-800/50 border-gray-700/50', 'bg-gray-50 border-gray-200')}`}>
+                    <Clock size={16} className={theme.colors.accent} />
+                    <div>
+                      <p className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-500', 'text-gray-400')}`}>Prépa</p>
+                      <p className="text-sm font-medium">{recipe.prepTime}</p>
+                    </div>
+                  </div>
+                )}
+                {recipe.cookTime && (
+                  <div className={`flex items-center gap-2 px-3 py-2 ${theme.properties.radius} border ${t('bg-gray-800/50 border-gray-700/50', 'bg-gray-50 border-gray-200')}`}>
+                    <Flame size={16} className="text-red-500" />
+                    <div>
+                      <p className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-500', 'text-gray-400')}`}>Cuisson</p>
+                      <p className="text-sm font-medium">{recipe.cookTime}</p>
+                    </div>
+                  </div>
+                )}
+                {recipe.totalTime && (
+                  <div className={`flex items-center gap-2 px-3 py-2 ${theme.properties.radius} border ${t('bg-gray-800/50 border-gray-700/50', 'bg-gray-50 border-gray-200')}`}>
+                    <Timer size={16} className="text-blue-500" />
+                    <div>
+                      <p className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-500', 'text-gray-400')}`}>Total</p>
+                      <p className="text-sm font-medium">{recipe.totalTime}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Description */}
+            {recipe.description && (
+              <p className={`text-sm leading-relaxed ${t('text-gray-400', 'text-gray-500')}`}>
+                {recipe.description}
+              </p>
+            )}
+
             <h2 className={`text-2xl font-bold ${theme.colors.accent}`}>
               Ingrédients
             </h2>
@@ -247,6 +292,32 @@ export const CookingView: React.FC<CookingViewProps> = ({
                 );
               })}
             </div>
+
+            {/* Étapes (collapsed) */}
+            {recipe.steps.length > 0 && (
+              <details className={`${theme.properties.radius} border overflow-hidden ${t('border-gray-700/50', 'border-gray-200')}`}>
+                <summary className={`flex items-center gap-2 cursor-pointer p-3 select-none ${t('hover:bg-gray-800/50', 'hover:bg-gray-50')} [&>svg.chevron]:open:rotate-180`}>
+                  <ListOrdered size={18} className={theme.colors.accent} />
+                  <span className="font-bold flex-1">Étapes ({recipe.steps.length})</span>
+                  <ChevronDown size={16} className={`chevron transition-transform ${t('text-gray-500', 'text-gray-400')}`} />
+                </summary>
+                <div className={`p-3 space-y-2 border-t ${t('border-gray-700/50', 'border-gray-200')}`}>
+                  {recipe.steps.map((step, i) => (
+                    <div
+                      key={i}
+                      onClick={() => setCurrentStep(i)}
+                      className={`flex items-start gap-3 p-2 ${theme.properties.radius} cursor-pointer transition-colors ${t('hover:bg-gray-800/50', 'hover:bg-gray-50')}`}
+                    >
+                      <span className={`text-xs font-bold shrink-0 w-6 h-6 -mt-0.5 rounded-full flex items-center justify-center ${t('bg-gray-800 text-gray-400', 'bg-gray-100 text-gray-500')}`}>
+                        {i + 1}
+                      </span>
+                      <p className={`text-sm leading-relaxed ${t('text-gray-300', 'text-gray-600')}`}>{step}</p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+
             <div className="h-20" />
           </div>
         ) : isFinished ? (
