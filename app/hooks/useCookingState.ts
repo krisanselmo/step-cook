@@ -106,6 +106,29 @@ export const useCookingState = (): UseCookingState => {
     [activeThemeId],
   );
 
+  // Restaure le thème choisi depuis le localStorage après le montage.
+  // (Lecture après montage plutôt qu'à l'init du state pour éviter un décalage
+  // d'hydratation SSR : serveur et client rendent 'default' en premier.)
+  useEffect(() => {
+    const stored = localStorage.getItem('activeThemeId');
+
+    if (stored && THEMES.some(plugin => plugin.id === stored)) {
+      setActiveThemeId(stored);
+    }
+  }, []);
+
+  // Persiste le thème à chaque changement, en sautant le tout premier rendu pour
+  // ne pas écraser la valeur stockée avant de l'avoir restaurée ci-dessus.
+  const themeHydrated = useRef(false);
+  useEffect(() => {
+    if (!themeHydrated.current) {
+      themeHydrated.current = true;
+
+      return;
+    }
+    localStorage.setItem('activeThemeId', activeThemeId);
+  }, [activeThemeId]);
+
   const [mealieRecipes, setMealieRecipes] = useState<MealieRecipeSummary[]>([]);
   const [isMealieLoading, setIsMealieLoading] = useState<boolean>(false);
   const [mealieError, setMealieError] = useState<string | null>(null);
