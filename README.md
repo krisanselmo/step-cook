@@ -1,16 +1,18 @@
 # Step Cook
 
-Application de cuisine interactive pour **Thermomix**, construite avec Next.js.
-Suivez n'importe quelle recette pas à pas avec timer, température, vitesse et
-sens inverse — collée à la main, importée depuis Mealie ou générée par IA.
+Application de cuisine interactive pour **robots de cuisine**, construite avec
+Next.js. Suivez n'importe quelle recette pas à pas avec timer, température,
+vitesse et sens inverse — collée à la main, importée depuis Mealie ou générée
+par IA.
 
 ## Pourquoi ?
 
-L'écosystème Thermomix est fermé : importer ses propres recettes dans le robot
-passe par un abonnement payant (Cookidoo). Step Cook contourne cette limite — au
-lieu de se battre avec l'écran du robot, on affiche la recette en mode pas-à-pas
-sur le **smartphone posé à côté**, avec les paramètres Thermomix (temps,
-température, vitesse, sens inverse) extraits automatiquement à chaque étape.
+Les robots de cuisine ont souvent un écosystème fermé : sur le Thermomix par
+exemple, importer ses propres recettes passe par un abonnement payant (Cookidoo).
+Step Cook contourne cette limite — au lieu de se battre avec le petit écran du
+robot, on affiche la recette en mode pas-à-pas sur le **smartphone posé à côté**,
+avec les paramètres (temps, température, vitesse, sens inverse) extraits
+automatiquement à chaque étape.
 
 ## Captures d'écran
 
@@ -71,7 +73,7 @@ npm run test:e2e:screenshots   # (Re)génère les captures du README
 
 Les tests E2E couvrent le flux **mode manuel** (100 % côté client, sans service
 externe) : rendu de l'accueil, parsing d'une recette, navigation entre étapes,
-extraction des paramètres Thermomix, et persistance du thème / dark mode. Les
+extraction des paramètres du robot, et persistance du thème / dark mode. Les
 routes Mealie et Firestore sont **mockées** pour des tests déterministes.
 
 > ℹ️ Playwright tourne contre un **build de production** (`next start`), pas le
@@ -82,5 +84,5 @@ routes Mealie et Firestore sont **mockées** pour des tests déterministes.
 ## Architecture
 
 Voir [`CLAUDE.md`](CLAUDE.md) pour le détail de l'arborescence, du flux de
-données des recettes (Gemini / Mealie / manuel / Firestore) et du parsing
-Thermomix.
+données des recettes (Gemini / Mealie / manuel / Firestore) et du parsing des
+paramètres du robot.
