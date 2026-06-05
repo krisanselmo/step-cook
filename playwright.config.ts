@@ -14,7 +14,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'html' : 'list',
   use: {
-    baseURL: 'http://localhost:4000',
+    baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     viewport: { width: 1280, height: 800 },
     // Le service worker de l'app est un passthrough qui rejouerait les fetch et
@@ -31,10 +31,12 @@ export default defineConfig({
       },
     },
   ],
+  // On teste contre un build de production (`next start`), pas le serveur de dev :
+  // évite l'indicateur de dev Next.js sur les captures et reflète le rendu réel.
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:4000',
+    command: 'npm run build && npm run start',
+    url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });

@@ -1,28 +1,34 @@
 # Step Cook
 
 Application de cuisine interactive pour **Thermomix**, construite avec Next.js.
-Suivez une recette pas à pas avec timer, température, vitesse et sens inverse —
-depuis Mealie, l'IA (Gemini) ou en collant simplement du texte.
+Suivez n'importe quelle recette pas à pas avec timer, température, vitesse et
+sens inverse — collée à la main, importée depuis Mealie ou générée par IA.
+
+## Pourquoi ?
+
+L'écosystème Thermomix est fermé : importer ses propres recettes dans le robot
+passe par un abonnement payant (Cookidoo). Step Cook contourne cette limite — au
+lieu de se battre avec l'écran du robot, on affiche la recette en mode pas-à-pas
+sur le **smartphone posé à côté**, avec les paramètres Thermomix (temps,
+température, vitesse, sens inverse) extraits automatiquement à chaque étape.
 
 ## Captures d'écran
 
-| Accueil | Aperçu de recette |
+| Accueil | Thème « Chez Gusteau » (mode clair) |
 |---|---|
-| ![Accueil](docs/screenshots/01-accueil.png) | ![Aperçu](docs/screenshots/02-apercu.png) |
+| ![Accueil](docs/screenshots/01-accueil.png) | ![Chez Gusteau](docs/screenshots/04-theme-gusteau.png) |
 
-| Étape de cuisson (timer + Thermomix) | Thèmes pluggables (ex. Mario) |
+| Aperçu de la recette (mobile) | Étape de cuisson (mobile) |
 |---|---|
-| ![Étape](docs/screenshots/03-etape.png) | ![Thème Mario](docs/screenshots/04-theme-mario.png) |
+| ![Aperçu](docs/screenshots/02-apercu.png) | ![Étape](docs/screenshots/03-etape.png) |
 
-> Les captures sont générées automatiquement par Playwright (`npm run test:e2e:screenshots`).
+> Captures générées automatiquement par Playwright (`npm run test:e2e:screenshots`).
 
 ## Stack
 
 - **Next.js 16** (App Router), **React 19**, **TypeScript**
 - **Tailwind CSS 4**, icônes **lucide-react**
-- **Google Gemini** (génération / modification de recettes)
-- **Mealie** (gestionnaire de recettes auto-hébergé) + **Firebase Firestore**
-- **PWA** (manifest + service worker), thèmes pluggables, dark/light mode
+- **PWA** (manifest + service worker), thèmes pluggables, dark/light mode persistés
 - Tests : **Jest** + Testing Library (unitaires) et **Playwright** (E2E)
 
 ## Démarrage
@@ -32,7 +38,22 @@ npm install
 npm run dev        # http://localhost:4000
 ```
 
-Variables d'environnement attendues dans `.env.local` : voir [`CLAUDE.md`](CLAUDE.md).
+Le cœur de l'app (coller une recette → pas-à-pas) fonctionne **sans aucune
+configuration**.
+
+### Services externes (optionnels)
+
+Ces intégrations sont **facultatives** et se dégradent proprement si elles ne
+sont pas configurées (la colonne correspondante affiche un état vide/erreur, le
+reste de l'app continue de fonctionner) :
+
+| Service | Rôle | Variables |
+|---|---|---|
+| **Mealie** | Importer ses recettes depuis une instance Mealie auto-hébergée | `MEALIE_BASE_URL`, `MEALIE_API_TOKEN`, `MEALIE_CF_COOKIE` |
+| **Gemini** | Générer / adapter des recettes par IA | `GEMINI_API_KEY` |
+| **Firebase Firestore** | Sauvegarder les recettes générées par IA | `FIREBASE_SERVICE_ACCOUNT_*` |
+
+Détail des variables d'environnement : voir [`CLAUDE.md`](CLAUDE.md).
 
 ## Commandes
 
@@ -53,9 +74,10 @@ externe) : rendu de l'accueil, parsing d'une recette, navigation entre étapes,
 extraction des paramètres Thermomix, et persistance du thème / dark mode. Les
 routes Mealie et Firestore sont **mockées** pour des tests déterministes.
 
-> ℹ️ Playwright utilise le **Chrome système** (`channel: 'chrome'`) car les
-> Chromium empaquetés ne couvrent pas toutes les distributions. Assurez-vous
-> d'avoir Google Chrome installé.
+> ℹ️ Playwright tourne contre un **build de production** (`next start`), pas le
+> serveur de dev — rendu réel et captures sans l'indicateur de dev Next.js. Il
+> utilise le **Chrome système** (`channel: 'chrome'`), donc Google Chrome doit
+> être installé.
 
 ## Architecture
 

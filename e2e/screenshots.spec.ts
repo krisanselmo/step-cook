@@ -7,6 +7,7 @@ import { mockRecipeApis, sampleRecipe } from './fixtures';
  * lancées explicitement via : npm run test:e2e:screenshots
  */
 const DIR = 'docs/screenshots';
+const PHONE = { width: 390, height: 844 };
 
 test.describe('@capture', () => {
   test.beforeEach(async ({ page }) => {
@@ -19,17 +20,20 @@ test.describe('@capture', () => {
     await page.screenshot({ path: `${DIR}/01-accueil.png` });
   });
 
-  test('aperçu de la recette', async ({ page }) => {
+  test('aperçu de la recette (mobile)', async ({ page }) => {
+    // Navigation à la taille desktop (la colonne Manuel y est visible)...
     await page.goto('/');
     await page
       .getByPlaceholder('Ou collez une recette ici...')
       .fill(sampleRecipe);
     await page.getByRole('button', { name: 'Cuisiner' }).click();
     await page.getByRole('heading', { name: 'Ingrédients' }).waitFor();
+    // ...puis capture en viewport mobile (la vue cuisine est responsive).
+    await page.setViewportSize(PHONE);
     await page.screenshot({ path: `${DIR}/02-apercu.png` });
   });
 
-  test('étape de cuisson (timer + Thermomix)', async ({ page }) => {
+  test('étape de cuisson (mobile)', async ({ page }) => {
     await page.goto('/');
     await page
       .getByPlaceholder('Ou collez une recette ici...')
@@ -37,15 +41,17 @@ test.describe('@capture', () => {
     await page.getByRole('button', { name: 'Cuisiner' }).click();
     await page.getByRole('button', { name: 'Étape suivante' }).click();
     await page.getByText('Étape 1', { exact: true }).waitFor();
+    await page.setViewportSize(PHONE);
     await page.screenshot({ path: `${DIR}/03-etape.png` });
   });
 
-  test('thème Mario', async ({ page }) => {
-    await page.addInitScript(() =>
-      localStorage.setItem('activeThemeId', 'mario'),
-    );
+  test('thème Chez Gusteau (mode clair)', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('activeThemeId', 'ratatouille');
+      localStorage.setItem('isDarkMode', 'false');
+    });
     await page.goto('/');
     await page.getByText('Tarte aux pommes').waitFor();
-    await page.screenshot({ path: `${DIR}/04-theme-mario.png` });
+    await page.screenshot({ path: `${DIR}/04-theme-gusteau.png` });
   });
 });
