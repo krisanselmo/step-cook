@@ -33,9 +33,16 @@ const loraFont = Lora({
 export const metadata: Metadata = {
   title: 'Step Cook',
   description: 'Recettes pas à pas pour Thermomix',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'Step Cook',
+    statusBarStyle: 'default',
+  },
   icons: {
     icon: '/icon.svg',
-    apple: '/icon.svg',
+    // iOS n'affiche pas les SVG en icône d'écran d'accueil : il faut un PNG.
+    apple: '/icon-192x192.png',
   },
 };
 
