@@ -28,7 +28,7 @@ const customJestConfig: Config = {
     '/node_modules/',
     '^.+\\.module\\.(css|sass|scss)$',
   ],
-  testPathIgnorePatterns: ['/node_modules/', '/.next/', '/private/'], // Ignore private folder
+  testPathIgnorePatterns: ['/node_modules/', '/.next/', '/private/', '/e2e/'], // e2e = Playwright
 };
 
 const jestConfig: Config = customJestConfig;

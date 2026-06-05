@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Step Cook
 
-## Getting Started
+Application de cuisine interactive pour **Thermomix**, construite avec Next.js.
+Suivez une recette pas à pas avec timer, température, vitesse et sens inverse —
+depuis Mealie, l'IA (Gemini) ou en collant simplement du texte.
 
-First, run the development server:
+## Captures d'écran
+
+| Accueil | Aperçu de recette |
+|---|---|
+| ![Accueil](docs/screenshots/01-accueil.png) | ![Aperçu](docs/screenshots/02-apercu.png) |
+
+| Étape de cuisson (timer + Thermomix) | Thèmes pluggables (ex. Mario) |
+|---|---|
+| ![Étape](docs/screenshots/03-etape.png) | ![Thème Mario](docs/screenshots/04-theme-mario.png) |
+
+> Les captures sont générées automatiquement par Playwright (`npm run test:e2e:screenshots`).
+
+## Stack
+
+- **Next.js 16** (App Router), **React 19**, **TypeScript**
+- **Tailwind CSS 4**, icônes **lucide-react**
+- **Google Gemini** (génération / modification de recettes)
+- **Mealie** (gestionnaire de recettes auto-hébergé) + **Firebase Firestore**
+- **PWA** (manifest + service worker), thèmes pluggables, dark/light mode
+- Tests : **Jest** + Testing Library (unitaires) et **Playwright** (E2E)
+
+## Démarrage
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:4000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Variables d'environnement attendues dans `.env.local` : voir [`CLAUDE.md`](CLAUDE.md).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Commandes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev                    # Serveur de dev (port 4000)
+npm run build                  # Build production
+npm run lint                   # ESLint
+npm test                       # Tests unitaires (Jest)
+npm run test:e2e               # Tests end-to-end (Playwright)
+npm run test:e2e:ui            # Playwright en mode UI
+npm run test:e2e:screenshots   # (Re)génère les captures du README
+```
 
-## Learn More
+## Tests E2E (Playwright)
 
-To learn more about Next.js, take a look at the following resources:
+Les tests E2E couvrent le flux **mode manuel** (100 % côté client, sans service
+externe) : rendu de l'accueil, parsing d'une recette, navigation entre étapes,
+extraction des paramètres Thermomix, et persistance du thème / dark mode. Les
+routes Mealie et Firestore sont **mockées** pour des tests déterministes.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> ℹ️ Playwright utilise le **Chrome système** (`channel: 'chrome'`) car les
+> Chromium empaquetés ne couvrent pas toutes les distributions. Assurez-vous
+> d'avoir Google Chrome installé.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Architecture
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Voir [`CLAUDE.md`](CLAUDE.md) pour le détail de l'arborescence, du flux de
+données des recettes (Gemini / Mealie / manuel / Firestore) et du parsing
+Thermomix.
