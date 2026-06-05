@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  step-cook:
+    image: krisanselmo/step-cook:latest
+    container_name: step-cook
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      # Variables pour l'IA Gemini
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL_NAME=${GEMINI_MODEL_NAME:-gemini-2.5-flash}
+
+      # Variables pour Mealie
+      - MEALIE_BASE_URL=${MEALIE_BASE_URL}
+      - MEALIE_API_TOKEN=${MEALIE_API_TOKEN}
+      - MEALIE_CF_COOKIE=${MEALIE_CF_COOKIE}
+    volumes:
+      # Montage du dossier private contenant gemini-preprompt.txt
+      - ./private:/app/private
+      -
+    # Limitation des ressources (Optionnel mais recommandé sur Pi 3)
+    deploy:
+      resources:
+        limits:
+          memory: 512M

@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+
+/* --- Styles de base (fusion de index.css et App.css) --- */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+/* Custom Font Classes */
+.font-pixel {
+  font-family: var(--font-pixel), monospace;
+  letter-spacing: 0.5px;
+}
+
+.font-cinzel {
+  font-family: var(--font-cinzel), Georgia, serif;
+}
+
+.font-lora {
+  font-family: var(--font-lora), Georgia, serif;
+}
+
+/* --- Animations Personnalisées ThermoMind --- */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes spin-slow-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(-10deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+.animate-spin-slow-reverse {
+  animation: spin-slow-reverse 3s linear infinite;
+}
+.animate-wiggle {
+  animation: wiggle 0.5s ease-in-out infinite;
+}
+
+/* Utilitaires */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

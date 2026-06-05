@@ -1,0 +1,34 @@
+services:
+  step-cook:
+    container_name: step-cook
+    # Force l'architecture ARM64 (pour Raspberry Pi 3/4/5)
+    # Si vous buildez depuis un PC x86, Docker utilisera QEMU automatiquement.
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Arguments optionnels pour optimiser le build
+      args:
+        NEXT_TELEMETRY_DISABLED: 1
+
+    image: krisanselmo/step-cook:latest
+    restart: unless-stopped
+
+    ports:
+      - '3211:3000'
+
+    # Injection des variables d'environnement
+    # Vous pouvez soit les mettre ici, soit utiliser un fichier .env (recommandé)
+    env_file:
+      - .env.local
+
+    environment:
+      - NODE_ENV=production
+      # Surcharge possible si pas dans le .env
+      # - GEMINI_MODEL_NAME=gemini-2.5-flash
+
+    # Limites de ressources (Conseillé pour un Pi 3 avec 1Go de RAM)
+    deploy:
+      resources:
+        limits:
+          memory: 800M
