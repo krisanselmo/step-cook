@@ -57,6 +57,59 @@ reste de l'app continue de fonctionner) :
 
 Détail des variables d'environnement : voir [`CLAUDE.md`](CLAUDE.md).
 
+## Installation (Docker)
+
+L'image est publiée en **multi-arch** (`linux/amd64` + `linux/arm64`, donc OK
+sur Raspberry Pi) sur Docker Hub :
+[`krisanselmo/step-cook`](https://hub.docker.com/r/krisanselmo/step-cook)
+— tag `:latest` ou une version précise (ex. `:0.1.5`).
+
+### Docker Compose (recommandé)
+
+```yaml
+# docker-compose.yml
+services:
+  step-cook:
+    image: krisanselmo/step-cook:latest
+    container_name: step-cook
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env.local        # cf. .env.example — toutes les variables sont optionnelles
+    environment:
+      - NODE_ENV=production
+    # Uniquement si vous utilisez Firebase via un fichier service account :
+    volumes:
+      - ./private:/app/private
+    deploy:
+      resources:
+        limits:
+          memory: 512M    # confortable, même sur un Raspberry Pi
+```
+
+```bash
+cp .env.example .env.local   # remplissez ce dont vous avez besoin (ou laissez vide)
+docker compose up -d         # → http://localhost:3000
+```
+
+### En une commande
+
+```bash
+docker run -d -p 3000:3000 --env-file .env.local \
+  --name step-cook krisanselmo/step-cook:latest
+```
+
+### Builder / publier soi-même
+
+Le dépôt fournit aussi un `docker-compose.yml` (build depuis les sources) et
+`templates/docker-compose.yml` (image publiée).
+
+```bash
+docker compose up --build    # build local depuis le Dockerfile
+./build.sh                   # build multi-arch (amd64+arm64) + push (tag = version de package.json)
+```
+
 ## Commandes
 
 ```bash
