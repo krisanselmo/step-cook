@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono, VT323 } from 'next/font/google';
+import { Geist, Geist_Mono, VT323, Cinzel, Lora } from 'next/font/google';
 import './globals.css';
 
 const geistSans = Geist({
@@ -16,6 +16,18 @@ const pixelFont = VT323({
   weight: '400',
   variable: '--font-pixel',
   subsets: ['latin'],
+});
+
+const cinzelFont = Cinzel({
+  variable: '--font-cinzel',
+  subsets: ['latin'],
+});
+
+const loraFont = Lora({
+  variable: '--font-lora',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  style: ['normal'],
 });
 
 export const metadata: Metadata = {
@@ -49,7 +61,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${pixelFont.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${pixelFont.variable} ${cinzelFont.variable} ${loraFont.variable} antialiased`}
       >
         {children}
       </body>

@@ -3,7 +3,10 @@ import {
   CupSoda,
   Fish,
   Leaf,
+  Rat,
+  Skull,
   Sparkles,
+  Star,
   Wheat,
   Zap,
 } from 'lucide-react';
@@ -45,30 +48,26 @@ const daveTheme: ThemePlugin = {
   properties: {
     font: 'font-pixel',
     radius: 'rounded-none',
-    // Bouton style "UI de jeu" : Bordure épaisse, ombre dure et décalage au survol/clic
     buttonStyle:
-      'border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all',
+      'border-4 border-[#0a0a2e] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all',
   },
   colors: {
-    accent: 'text-[#00d1ff]', // Cyan néon du jeu
-    accentDarker: 'text-[#0088aa]',
-    bgPrimary: 'bg-[#ff5f5f]', // Rouge "Sushi/Thon" pour les actions principales
-    bgPrimaryHover: 'hover:bg-[#ff7a7a]',
-    borderAccent: 'border-[#00d1ff]',
+    accent: 'text-[#5ee8ff]',
+    accentDarker: 'text-[#38c8e0]',
+    bgPrimary: 'bg-[#ff6b4a]',
+    bgPrimaryHover: 'hover:bg-[#ff8566]',
+    borderAccent: 'border-[#5ee8ff]',
     shadowAccent: 'shadow-none',
 
-    // États cochés
-    checkedBgDark: 'bg-[#29366f] border-4 border-[#00d1ff] text-[#00d1ff]',
-    checkedBgLight: 'bg-[#ffd9a2] border-4 border-[#8b4513] text-[#5d2e0a]', // Style bois/tampon
+    checkedBgDark: 'bg-[#5ee8ff]/15 border-4 border-[#5ee8ff] text-[#5ee8ff]',
+    checkedBgLight: 'bg-[#ffe4b5] border-4 border-[#8b4513] text-[#5d2e0a]',
 
-    // Backgrounds (Sombre = Blue Hole / Clair = Bancho Sushi)
-    rootBgDark: 'bg-[#1a1c2c] text-[#f4f4f4]', // Bleu abyssal
-    rootBgLight: 'bg-[#fcf5e5] text-[#3c2a21]', // Beige parchemin / Papier de riz
+    rootBgDark: 'bg-[#0a0e2a] text-[#e8f0ff]',
+    rootBgLight: 'bg-[#fcf5e5] text-[#3c2a21]',
 
-    // Cards
-    cardBgDark: 'bg-[#29366f] border-4 border-black', // Panneau métal/sous-marin
+    cardBgDark: 'bg-[#12184a] border-4 border-[#1e2870]',
     cardBgLight:
-      'bg-[#fffdfa] border-4 border-[#3c2a21] shadow-[8px_8px_0px_0px_rgba(60,42,33,0.1)]', // Panneau bois/menu
+      'bg-[#fffdfa] border-4 border-[#3c2a21] shadow-[8px_8px_0px_0px_rgba(60,42,33,0.1)]',
   },
 };
 
@@ -100,8 +99,95 @@ const cyberTheme: ThemePlugin = {
   },
 };
 
+// Thème 4 : Monkey Island (Pirate / Rétro aventure)
+const monkeyIslandTheme: ThemePlugin = {
+  id: 'monkey-island',
+  name: 'Monkey Island',
+  title: 'SCUMM Kitchen',
+  icon: Skull,
+  properties: {
+    font: 'font-cinzel',
+    radius: 'rounded-lg',
+    buttonStyle:
+      'border-2 border-[#c8a84e] shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,0.5)] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all',
+  },
+  colors: {
+    accent: 'text-[#c8a84e]',
+    accentDarker: 'text-[#a68a3a]',
+    bgPrimary: 'bg-[#8b2f2f]',
+    bgPrimaryHover: 'hover:bg-[#a33a3a]',
+    borderAccent: 'border-[#c8a84e]',
+    shadowAccent: 'shadow-[0_0_15px_rgba(200,168,78,0.3)]',
+    checkedBgDark: 'bg-[#2a1a4e]/60 border-[#c8a84e]/50 text-[#c8a84e]',
+    checkedBgLight: 'bg-[#f5e6c8] border-[#8b6914] text-[#5a3e0a]',
+    rootBgDark: 'bg-[#0f0a1a] text-[#e8d5a3]',
+    rootBgLight: 'bg-[#f2e8d0] text-[#2a1a0a]',
+    cardBgDark: 'bg-[#1a1030] border-[#3a2a5e]',
+    cardBgLight: 'bg-[#fdf6e3] border-[#c8a84e]',
+  },
+};
+
+// Thème 5 : Ratatouille (Paris / Gusteau's)
+const ratatouilleTheme: ThemePlugin = {
+  id: 'ratatouille',
+  name: 'Ratatouille',
+  title: "Chez Gusteau",
+  icon: Rat,
+  properties: {
+    font: 'font-lora',
+    radius: 'rounded-lg',
+    buttonStyle:
+      'shadow-md hover:shadow-lg active:scale-[0.97] transition-all',
+  },
+  colors: {
+    accent: 'text-[#d42f2f]',
+    accentDarker: 'text-[#a82525]',
+    bgPrimary: 'bg-[#d42f2f]',
+    bgPrimaryHover: 'hover:bg-[#b82828]',
+    borderAccent: 'border-[#d42f2f]',
+    shadowAccent: 'shadow-[0_0_20px_rgba(212,47,47,0.25)]',
+    checkedBgDark: 'bg-[#d42f2f]/10 border-[#d42f2f]/40 text-[#f0a0a0]',
+    checkedBgLight: 'bg-[#fde8e8] border-[#d42f2f] text-[#a82525]',
+    rootBgDark: 'bg-[#1e1428] text-[#f5ece0]',
+    rootBgLight: 'bg-[#fdf5e6] text-[#2d1f12]',
+    cardBgDark: 'bg-[#2a1c36] border-[#d42f2f]/20',
+    cardBgLight: 'bg-[#fff9ef] border-[#e0c9a8]',
+  },
+};
+
+// Thème 6 : Mario (Nintendo / Pixel / Champignon)
+const marioTheme: ThemePlugin = {
+  id: 'mario',
+  name: 'Mario',
+  title: "MAMA MIA'S",
+  icon: Star,
+  properties: {
+    font: 'font-pixel',
+    radius: 'rounded-none',
+    buttonStyle:
+      'border-4 border-[#1a1a1a] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all',
+  },
+  colors: {
+    accent: 'text-[#e8c500]',
+    accentDarker: 'text-[#c8a800]',
+    bgPrimary: 'bg-[#e52521]',
+    bgPrimaryHover: 'hover:bg-[#ff3b36]',
+    borderAccent: 'border-[#e8c500]',
+    shadowAccent: 'shadow-none',
+    checkedBgDark: 'bg-[#e8c500]/15 border-4 border-[#e8c500] text-[#e8c500]',
+    checkedBgLight: 'bg-[#fff8d0] border-4 border-[#c8a800] text-[#8a7000]',
+    rootBgDark: 'bg-[#2a0f8a] text-[#ffffff]',
+    rootBgLight: 'bg-[#63b4ff] text-[#1a1a1a]',
+    cardBgDark: 'bg-[#1a0860] border-4 border-[#3d1fb0]',
+    cardBgLight: 'bg-[#fffef5] border-4 border-[#1a1a1a] shadow-[6px_6px_0px_0px_rgba(0,0,0,0.15)]',
+  },
+};
+
 export const THEMES = [
   defaultTheme,
   daveTheme,
   cyberTheme,
+  monkeyIslandTheme,
+  ratatouilleTheme,
+  marioTheme,
 ] as const satisfies ThemePlugin[];

@@ -19,6 +19,14 @@
   letter-spacing: 0.5px;
 }
 
+.font-cinzel {
+  font-family: var(--font-cinzel), Georgia, serif;
+}
+
+.font-lora {
+  font-family: var(--font-lora), Georgia, serif;
+}
+
 /* --- Animations Personnalisées ThermoMind --- */
 @keyframes spin-slow {
   from {
