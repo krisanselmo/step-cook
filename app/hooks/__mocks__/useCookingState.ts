@@ -94,6 +94,12 @@ export const useCookingState = jest.fn(() => ({
   handleFileChange: jest.fn(),
   handleUpload: jest.fn(),
   generateGeminiRecipe: jest.fn(),
+  savedRecipes: [],
+  isSavedLoading: false,
+  savedError: null,
+  fetchSavedRecipes: jest.fn(),
+  loadSavedRecipe: jest.fn(),
+  deleteSavedRecipe: jest.fn(),
 }));
 
 // Re-export original types if needed, but not common for mock files

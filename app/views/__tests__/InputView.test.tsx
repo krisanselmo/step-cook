@@ -22,9 +22,8 @@ describe('InputView', () => {
     mealieError: null,
     searchTerm: '',
     setSearchTerm: jest.fn(),
-    sortOption: 'date',
+    sortOption: 'date-desc',
     setSortOption: jest.fn(),
-    filteredRecipes: [],
     fetchMealieRecipes: jest.fn(),
     loadMealieRecipe: jest.fn(),
     isDarkMode: true,
@@ -59,6 +58,12 @@ describe('InputView', () => {
       defaultProps.isDarkMode ? darkClass : lightClass,
     ),
     handleGeminiGenerate: jest.fn(),
+    savedRecipes: [],
+    isSavedLoading: false,
+    savedError: null,
+    fetchSavedRecipes: jest.fn(),
+    loadSavedRecipe: jest.fn(),
+    deleteSavedRecipe: jest.fn(),
   };
 
   beforeEach(() => {
@@ -119,9 +124,7 @@ describe('InputView', () => {
   it('switches to Gemini tab and handles input', async () => {
     render(<InputView {...defaultProps} />);
 
-    // Switch to Gemini tab (mobile view)
-    fireEvent.click(screen.getByRole('button', { name: /Gemini/i }));
-
+    // La colonne « Assistant IA » est rendue d'emblée (desktop), pas d'onglet à activer.
     const geminiTextarea = screen.getByPlaceholderText(
       /Décrivez votre recette de rêve/i,
     ) as HTMLTextAreaElement;
@@ -149,26 +152,9 @@ describe('InputView', () => {
         description: 'Desc Two',
       },
     ];
-    mockUseCookingState.mockReturnValue({
-      ...defaultProps,
-      mealieRecipes,
-      filteredRecipes: mealieRecipes,
-      isMealieLoading: false,
-      activeTab: 'mealie',
-    });
+    render(<InputView {...defaultProps} mealieRecipes={mealieRecipes} />);
 
-    render(
-      <InputView
-        {...defaultProps}
-        mealieRecipes={mealieRecipes}
-        filteredRecipes={mealieRecipes}
-        activeTab="mealie"
-      />,
-    );
-
-    // Switch to Mealie tab (mobile view if activeTab is not already mealie)
-    fireEvent.click(screen.getByRole('button', { name: /Mealie/i }));
-
+    // Mealie et recettes sauvegardées sont fusionnées dans la colonne « Recettes ».
     expect(screen.getByText('Recipe One')).toBeInTheDocument();
     expect(screen.getByText('Recipe Two')).toBeInTheDocument();
 
@@ -177,32 +163,12 @@ describe('InputView', () => {
   });
 
   it('displays loading state for Mealie recipes', () => {
-    mockUseCookingState.mockReturnValue({
-      ...defaultProps,
-      isMealieLoading: true,
-      activeTab: 'mealie',
-    });
-    render(
-      <InputView {...defaultProps} isMealieLoading={true} activeTab="mealie" />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: /Mealie/i }));
+    render(<InputView {...defaultProps} isMealieLoading={true} />);
     expect(screen.getByText('Chargement...')).toBeInTheDocument();
   });
 
   it('displays error state for Mealie recipes', () => {
-    mockUseCookingState.mockReturnValue({
-      ...defaultProps,
-      mealieError: 'Failed to load',
-      activeTab: 'mealie',
-    });
-    render(
-      <InputView
-        {...defaultProps}
-        mealieError="Failed to load"
-        activeTab="mealie"
-      />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: /Mealie/i }));
+    render(<InputView {...defaultProps} mealieError="Failed to load" />);
     expect(screen.getByText('Failed to load')).toBeInTheDocument();
   });
 });

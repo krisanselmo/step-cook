@@ -21,16 +21,17 @@ describe('parseIngredientLine', () => {
     const result = parseIngredientLine(line);
     expect(result).toEqual({
       fullText: "150 ml d'eau tiède",
-      keywords: ['eau', 'tiède'],
+      keywords: ['eau', 'tiede'], // les accents sont retirés lors de l'extraction
     });
   });
 
   it('should handle lines with multiple keywords', () => {
-    const line = '3 œufs frais';
+    // 'frais' fait partie des stop-words (modificateur) : on teste avec 'bio'.
+    const line = '3 œufs bio';
     const result = parseIngredientLine(line);
     expect(result).toEqual({
-      fullText: '3 œufs frais',
-      keywords: ['œufs', 'frais'],
+      fullText: '3 œufs bio',
+      keywords: ['œufs', 'bio'],
     });
   });
 
@@ -161,8 +162,9 @@ Préparation:
 1. Étape avec //2
 2. Étape avec //`;
     const result = parseRecipe(input);
-    expect(result.steps[0]).toBe('1. Étape avec  (sens inverse) 2');
-    expect(result.steps[1]).toBe('2. Étape avec  (sens inverse + mijotage) ');
+    // La notation `//` est désormais normalisée en emojis lisibles (sens inverse).
+    expect(result.steps[0]).toBe('1. Étape avec /⏪/🥄2');
+    expect(result.steps[1]).toBe('2. Étape avec /⏪/🥄');
   });
 
   it('should assign a slug if provided for a JSON recipe', () => {

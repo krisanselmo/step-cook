@@ -182,15 +182,17 @@ describe('CookingView', () => {
       expect(screen.getByText('Ingrédients')).toBeInTheDocument();
       expect(screen.getByText('1 Egg')).toBeInTheDocument();
       expect(screen.getByText('2 Sugar')).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: /Démarrer/i }),
-      ).toBeInTheDocument();
+      // Le bouton affiche « Démarrer » mais son nom accessible est « Étape suivante »
+      // (aria-label), on le cible donc par son texte.
+      expect(screen.getByText('Démarrer')).toBeInTheDocument();
     });
 
     it('calls setCurrentStep with 0 when "Démarrer" is clicked', () => {
       render(<CookingView {...getMockedDefaultProps({ currentStep: -1 })} />);
-      fireEvent.click(screen.getByRole('button', { name: /Démarrer/i }));
-      expect(mockSetCurrentStep).toHaveBeenCalledWith(0);
+      fireEvent.click(screen.getByText('Démarrer').closest('button')!);
+      // La navigation utilise une fonction de mise à jour : setCurrentStep(p => ...)
+      const updater = mockSetCurrentStep.mock.calls[0][0];
+      expect(updater(-1)).toBe(0);
     });
 
     it('calls handleIngredientAction when ingredient is clicked', () => {
@@ -231,29 +233,30 @@ describe('CookingView', () => {
         isTimerRunning: false,
         stepParams: { ...defaultStepParams, time: '05:00', seconds: 300 },
       });
-      mockUseCookingState.mockReturnValue(initialProps);
-      render(<CookingView {...initialProps} />);
+      const { rerender } = render(<CookingView {...initialProps} />);
       expect(screen.getByText('05:00')).toBeInTheDocument();
 
-      const timerButton = screen.getByText('Temps').closest('button');
-      fireEvent.click(timerButton!);
-      expect(mockSetIsTimerRunning).toHaveBeenCalledWith(true);
+      fireEvent.click(screen.getByText('Temps').closest('button')!);
+      expect(initialProps.setIsTimerRunning).toHaveBeenCalledWith(true);
 
-      const runningTimerProps = getMockedDefaultProps({
-        currentStep: 0,
+      // Le composant lit timer/isTimerRunning depuis ses props : on re-render
+      // avec un timer en cours pour simuler la bascule inverse.
+      const runningTimerProps = {
+        ...initialProps,
         timer: 299,
         isTimerRunning: true,
-        stepParams: { ...defaultStepParams, time: '05:00', seconds: 300 },
-      });
-      mockUseCookingState.mockReturnValue(runningTimerProps); // Simulate running timer
-      fireEvent.click(timerButton!);
-      expect(mockSetIsTimerRunning).toHaveBeenCalledWith(false);
+        setIsTimerRunning: jest.fn(),
+      };
+      rerender(<CookingView {...runningTimerProps} />);
+      fireEvent.click(screen.getByText('Temps').closest('button')!);
+      expect(runningTimerProps.setIsTimerRunning).toHaveBeenCalledWith(false);
     });
 
     it('navigates to the next step when "next" button is clicked', () => {
       render(<CookingView {...getMockedDefaultProps({ currentStep: 0 })} />);
       fireEvent.click(screen.getByRole('button', { name: /Étape suivante/i }));
-      expect(mockSetCurrentStep).toHaveBeenCalledWith(1);
+      const updater = mockSetCurrentStep.mock.calls[0][0];
+      expect(updater(0)).toBe(1);
     });
 
     it('navigates to the previous step when "previous" button is clicked', () => {
@@ -261,7 +264,8 @@ describe('CookingView', () => {
       fireEvent.click(
         screen.getByRole('button', { name: /Étape précédente/i }),
       );
-      expect(mockSetCurrentStep).toHaveBeenCalledWith(0);
+      const updater = mockSetCurrentStep.mock.calls[0][0];
+      expect(updater(1)).toBe(0);
     });
   });
 
@@ -277,7 +281,15 @@ describe('CookingView', () => {
 
     it('renders the "Recette Terminée !" message', () => {
       render(<CookingView {...finishedProps} />);
-      expect(screen.getByText(/Recette Terminée/i)).toBeInTheDocument();
+      // Le titre est réparti sur deux lignes via un <br/>, on cible donc le <h2>.
+      expect(
+        screen.getByText(
+          (_, el) =>
+            el?.tagName === 'H2' &&
+            /recette/i.test(el.textContent || '') &&
+            /terminée/i.test(el.textContent || ''),
+        ),
+      ).toBeInTheDocument();
     });
 
     it('navigates to input view when "Autre Recette" is clicked', () => {
@@ -310,9 +322,10 @@ describe('CookingView', () => {
       const initialProps = getMockedDefaultProps({ isDarkMode: false });
       mockUseCookingState.mockReturnValue(initialProps);
       render(<CookingView {...initialProps} />);
+      // En mode clair (isDarkMode=false), le bouton propose de passer en mode sombre.
       const toggleButton = screen.getByRole('button', {
-        name: /Passer en mode clair/i,
-      }); // Sun icon is visible in light mode
+        name: /Passer en mode sombre/i,
+      });
       fireEvent.click(toggleButton);
       expect(mockSetIsDarkMode).toHaveBeenCalledWith(true);
     });

@@ -56,12 +56,14 @@ describe('ProcessingView', () => {
   });
 
   it('applies dark mode background classes when isDarkMode is true', () => {
-    mockUseCookingState.mockReturnValue({ ...defaultProps, isDarkMode: true });
-    render(<ProcessingView {...defaultProps} />);
+    // ProcessingView est piloté par ses props : on fournit un `t` qui renvoie la
+    // classe sombre (le `t` par défaut de defaultProps renvoie toujours la claire).
+    const t = jest.fn((darkClass: string) => darkClass);
+    render(<ProcessingView {...defaultProps} t={t} />);
     expect(screen.getByTestId('processing-view-container')).toHaveClass(
       'bg-gray-950',
     );
-    expect(defaultProps.t).toHaveBeenCalledWith('bg-gray-950', 'bg-gray-50');
+    expect(t).toHaveBeenCalledWith('bg-gray-950', 'bg-gray-50');
   });
 
   it('applies light mode background classes when isDarkMode is false', () => {

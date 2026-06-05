@@ -324,7 +324,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
             <h2 className="text-4xl font-bold text-center">
               Recette
               <br />
-              Terminée&apos; !
+              Terminée !
             </h2>
             <div className="flex flex-col sm:flex-row gap-4 items-center">
               <Button
