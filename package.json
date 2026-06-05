@@ -2,6 +2,7 @@
   "name": "step-cook",
   "version": "0.1.5",
   "private": true,
+  "license": "WTFPL",
   "scripts": {
     "dev": "next dev -p 4000",
     "build": "next build",
