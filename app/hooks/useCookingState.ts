@@ -129,6 +129,27 @@ export const useCookingState = (): UseCookingState => {
     localStorage.setItem('activeThemeId', activeThemeId);
   }, [activeThemeId]);
 
+  // Restaure le mode sombre/clair depuis le localStorage après le montage
+  // (même logique que le thème : lecture post-montage pour éviter le mismatch SSR).
+  useEffect(() => {
+    const stored = localStorage.getItem('isDarkMode');
+
+    if (stored !== null) {
+      setIsDarkMode(stored === 'true');
+    }
+  }, []);
+
+  // Persiste le mode sombre/clair à chaque changement (en sautant le premier rendu).
+  const darkModeHydrated = useRef(false);
+  useEffect(() => {
+    if (!darkModeHydrated.current) {
+      darkModeHydrated.current = true;
+
+      return;
+    }
+    localStorage.setItem('isDarkMode', String(isDarkMode));
+  }, [isDarkMode]);
+
   const [mealieRecipes, setMealieRecipes] = useState<MealieRecipeSummary[]>([]);
   const [isMealieLoading, setIsMealieLoading] = useState<boolean>(false);
   const [mealieError, setMealieError] = useState<string | null>(null);

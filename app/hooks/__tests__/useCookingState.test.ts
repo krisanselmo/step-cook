@@ -79,4 +79,25 @@ describe('useCookingState', () => {
       expect(result.current.activeThemeId).toBe('default');
     });
   });
+
+  describe('dark mode persistence (localStorage)', () => {
+    it('persists the dark mode preference', () => {
+      const { result } = renderHook(() => useCookingState());
+
+      act(() => {
+        result.current.setIsDarkMode(false);
+      });
+
+      expect(localStorage.getItem('isDarkMode')).toBe('false');
+      expect(result.current.isDarkMode).toBe(false);
+    });
+
+    it('restores the dark mode preference on mount', () => {
+      localStorage.setItem('isDarkMode', 'false');
+
+      const { result } = renderHook(() => useCookingState());
+
+      expect(result.current.isDarkMode).toBe(false);
+    });
+  });
 });
