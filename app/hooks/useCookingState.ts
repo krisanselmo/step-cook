@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Ingredient,
   StepParams,
@@ -192,22 +192,6 @@ export const useCookingState = (): UseCookingState => {
   const t = (darkClass: string, lightClass: string) =>
     isDarkMode ? darkClass : lightClass;
 
-  useEffect(() => {
-    const updateClock = () =>
-      setCurrentTime(
-        new Date().toLocaleTimeString('fr-FR', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-      );
-    updateClock();
-    const interval = setInterval(updateClock, 60000);
-    fetchMealieRecipes();
-    fetchSavedRecipes();
-
-    return () => clearInterval(interval);
-  }, []);
-
   // Cleanup preview URL
   useEffect(() => {
     return () => {
@@ -217,7 +201,7 @@ export const useCookingState = (): UseCookingState => {
     };
   }, [previewUrl]);
 
-  const fetchMealieRecipes = async () => {
+  const fetchMealieRecipes = useCallback(async () => {
     setIsMealieLoading(true);
     setMealieError(null);
 
@@ -235,9 +219,9 @@ export const useCookingState = (): UseCookingState => {
     } finally {
       setIsMealieLoading(false);
     }
-  };
+  }, []);
 
-  const fetchSavedRecipes = async () => {
+  const fetchSavedRecipes = useCallback(async () => {
     setIsSavedLoading(true);
     setSavedError(null);
 
@@ -255,7 +239,23 @@ export const useCookingState = (): UseCookingState => {
     } finally {
       setIsSavedLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const updateClock = () =>
+      setCurrentTime(
+        new Date().toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      );
+    updateClock();
+    const interval = setInterval(updateClock, 60000);
+    fetchMealieRecipes();
+    fetchSavedRecipes();
+
+    return () => clearInterval(interval);
+  }, [fetchMealieRecipes, fetchSavedRecipes]);
 
   const loadSavedRecipe = async (id: string) => {
     setView('processing');
@@ -431,7 +431,7 @@ export const useCookingState = (): UseCookingState => {
 
   // --- Chat IA ---
   const sendChatMessage = async (message: string) => {
-    if (!recipe || isChatLoading) return;
+    if (!recipe || isChatLoading) {return;}
 
     setChatMessages(prev => [...prev, { role: 'user', content: message }]);
     setIsChatLoading(true);
@@ -485,7 +485,7 @@ export const useCookingState = (): UseCookingState => {
   };
 
   const saveChatRecipe = async () => {
-    if (!recipe?.firestoreId) return;
+    if (!recipe?.firestoreId) {return;}
 
     try {
       const res = await fetch(`/api/firestore/recipes/${recipe.firestoreId}`, {
@@ -511,7 +511,7 @@ export const useCookingState = (): UseCookingState => {
     }
   };
 
-  const generateGeminiRecipe = async (userPrompt: string) => {
+  const generateGeminiRecipe = useCallback(async (userPrompt: string) => {
     setView('processing');
 
     try {
@@ -556,7 +556,22 @@ export const useCookingState = (): UseCookingState => {
           (err instanceof Error ? err.message : String(err)),
       );
     }
-  };
+  }, [fetchSavedRecipes]);
+
+  // Deep link for external tools: /?prompt=<text> auto-generates via Gemini.
+  // The URL is cleaned right away so a refresh (or a re-run of the effect)
+  // doesn't re-trigger a token-consuming generation.
+  useEffect(() => {
+    const prompt = (
+      new URLSearchParams(window.location.search).get('prompt') || ''
+    ).trim();
+
+    if (!prompt) {
+      return;
+    }
+    window.history.replaceState(null, '', window.location.pathname);
+    generateGeminiRecipe(prompt);
+  }, [generateGeminiRecipe]);
 
   const handleIngredientAction = (ingredientFullText: string) => {
     const newChecked = new Set(checkedIngredients);

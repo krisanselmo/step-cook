@@ -341,7 +341,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
                   className="px-8"
                   theme={theme}
                 >
-                  Je l'ai cuisiné ! <Camera size={18} />
+                  Je l&apos;ai cuisiné ! <Camera size={18} />
                 </Button>
               )}
             </div>
@@ -666,7 +666,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   }, [chatMessages, isChatLoading]);
 
   const handleSend = () => {
-    if (!input.trim() || isChatLoading) return;
+    if (!input.trim() || isChatLoading) {return;}
     sendChatMessage(input.trim());
     setInput('');
   };

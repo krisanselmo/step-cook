@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 const EDIT_PROMPT = `Tu es un assistant culinaire expert spécialisé Thermomix. L'utilisateur va te donner une recette existante au format JSON et une demande de modification.
 
@@ -61,12 +61,13 @@ export async function POST(req: NextRequest) {
 
     const fullPrompt = `${EDIT_PROMPT}\n\nRecette actuelle :\n${recipeJson}\n\nDemande de l'utilisateur : "${message}"\n\nRéponse :`;
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: modelName });
+    const ai = new GoogleGenAI({ apiKey });
 
-    const result = await model.generateContent(fullPrompt);
-    const response = await result.response;
-    const text = response.text().trim();
+    const response = await ai.models.generateContent({
+      model: modelName,
+      contents: fullPrompt,
+    });
+    const text = (response.text ?? '').trim();
 
     const jsonText = text.replace(/^```json\s*/, '').replace(/```\s*$/, '').trim();
     const parsed = JSON.parse(jsonText);

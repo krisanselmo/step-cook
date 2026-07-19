@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { CookingView } from '../CookingView';
 import { useCookingState } from '@/app/hooks/useCookingState';
@@ -7,15 +7,6 @@ import { Recipe, StepParams } from '@/app/lib/types';
 
 // Mock the useCookingState hook
 jest.mock('@/app/hooks/useCookingState');
-
-// Mock Image from next/image
-jest.mock('next/image', () => ({
-  __esModule: true,
-  default: (props: any) => {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img {...props} />;
-  },
-}));
 
 describe('CookingView', () => {
   const mockUseCookingState = useCookingState as jest.MockedFunction<

@@ -1,15 +1,4 @@
-import {
-  ChefHat,
-  CupSoda,
-  Fish,
-  Leaf,
-  Rat,
-  Skull,
-  Sparkles,
-  Star,
-  Wheat,
-  Zap,
-} from 'lucide-react';
+import { ChefHat, Fish, Rat, Skull, Star, Zap } from 'lucide-react';
 import { ThemePlugin } from './types';
 
 // Thème 1 : Classique (Vert/Clean)
