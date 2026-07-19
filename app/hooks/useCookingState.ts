@@ -558,6 +558,19 @@ export const useCookingState = (): UseCookingState => {
     }
   };
 
+  // Deep link for external tools: /?prompt=<text> auto-generates via Gemini.
+  // The URL is cleaned right away so a refresh doesn't re-trigger a
+  // token-consuming generation.
+  useEffect(() => {
+    const prompt = (
+      new URLSearchParams(window.location.search).get('prompt') || ''
+    ).trim();
+    if (!prompt) return;
+    window.history.replaceState(null, '', window.location.pathname);
+    generateGeminiRecipe(prompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleIngredientAction = (ingredientFullText: string) => {
     const newChecked = new Set(checkedIngredients);
 
