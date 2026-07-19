@@ -25,6 +25,11 @@ describe('useCookingState', () => {
 
   beforeEach(() => {
     process.env.NEXT_PUBLIC_MEALIE_BASE_URL = MOCK_MEALIE_BASE_URL;
+    // jsdom has no fetch; the hook fetches Mealie + saved recipes on mount
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    } as unknown as Response);
   });
 
   afterEach(() => {
@@ -33,8 +38,18 @@ describe('useCookingState', () => {
     localStorage.clear();
   });
 
-  it('should open the correct Mealie page URL when openMealiePage is called', () => {
-    const { result } = renderHook(() => useCookingState());
+  // Renders the hook and flushes the mount-effect fetches so their state
+  // updates land inside act()
+  const renderCookingHook = async () => {
+    const utils = renderHook(() => useCookingState());
+
+    await act(async () => {});
+
+    return utils;
+  };
+
+  it('should open the correct Mealie page URL when openMealiePage is called', async () => {
+    const { result } = await renderCookingHook();
 
     act(() => {
       result.current.setRecipe(MOCK_RECIPE);
@@ -51,8 +66,8 @@ describe('useCookingState', () => {
   });
 
   describe('theme persistence (localStorage)', () => {
-    it('persists the selected theme to localStorage', () => {
-      const { result } = renderHook(() => useCookingState());
+    it('persists the selected theme to localStorage', async () => {
+      const { result } = await renderCookingHook();
 
       act(() => {
         result.current.setActiveThemeId('mario');
@@ -62,27 +77,27 @@ describe('useCookingState', () => {
       expect(result.current.theme.id).toBe('mario');
     });
 
-    it('restores the theme from localStorage on mount', () => {
+    it('restores the theme from localStorage on mount', async () => {
       localStorage.setItem('activeThemeId', 'mario');
 
-      const { result } = renderHook(() => useCookingState());
+      const { result } = await renderCookingHook();
 
       expect(result.current.activeThemeId).toBe('mario');
       expect(result.current.theme.id).toBe('mario');
     });
 
-    it('ignores an unknown stored theme and falls back to default', () => {
+    it('ignores an unknown stored theme and falls back to default', async () => {
       localStorage.setItem('activeThemeId', 'does-not-exist');
 
-      const { result } = renderHook(() => useCookingState());
+      const { result } = await renderCookingHook();
 
       expect(result.current.activeThemeId).toBe('default');
     });
   });
 
   describe('dark mode persistence (localStorage)', () => {
-    it('persists the dark mode preference', () => {
-      const { result } = renderHook(() => useCookingState());
+    it('persists the dark mode preference', async () => {
+      const { result } = await renderCookingHook();
 
       act(() => {
         result.current.setIsDarkMode(false);
@@ -92,10 +107,10 @@ describe('useCookingState', () => {
       expect(result.current.isDarkMode).toBe(false);
     });
 
-    it('restores the dark mode preference on mount', () => {
+    it('restores the dark mode preference on mount', async () => {
       localStorage.setItem('isDarkMode', 'false');
 
-      const { result } = renderHook(() => useCookingState());
+      const { result } = await renderCookingHook();
 
       expect(result.current.isDarkMode).toBe(false);
     });
