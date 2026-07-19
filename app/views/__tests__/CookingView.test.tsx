@@ -8,15 +8,6 @@ import { Recipe, StepParams } from '@/app/lib/types';
 // Mock the useCookingState hook
 jest.mock('@/app/hooks/useCookingState');
 
-// Mock Image from next/image
-jest.mock('next/image', () => ({
-  __esModule: true,
-  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
-    // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
-    return <img {...props} />;
-  },
-}));
-
 describe('CookingView', () => {
   const mockUseCookingState = useCookingState as jest.MockedFunction<
     typeof useCookingState
