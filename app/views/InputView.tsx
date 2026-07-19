@@ -15,7 +15,6 @@ import {
   Sparkles,
   Pencil,
   Trash2,
-  ExternalLink,
 } from 'lucide-react';
 import {Button} from '@/app/components/ui/Button';
 import {ThemeDropdown} from '@/app/components/ui/ThemeDropdown';
@@ -51,6 +50,7 @@ function toRecipeItems(
     date: r.createdAt,
     source: 'saved',
   }));
+
   return [...mealieItems, ...savedItems];
 }
 
@@ -76,9 +76,12 @@ function filterAndSort(
   } else {
     const dir = sortOption === 'date-desc' ? -1 : 1;
     result = [...result].sort((a, b) => {
-      if (!a.date && !b.date) return 0;
-      if (!a.date) return 1;
-      if (!b.date) return -1;
+      if (!a.date && !b.date) {return 0;}
+
+      if (!a.date) {return 1;}
+
+      if (!b.date) {return -1;}
+
       return dir * (new Date(a.date).getTime() - new Date(b.date).getTime());
     });
   }
@@ -217,6 +220,7 @@ export const InputView: React.FC<InputViewProps> = ({
     const filtered = sourceFilter === 'all'
       ? allRecipes
       : allRecipes.filter(r => r.source === sourceFilter);
+
     return filterAndSort(filtered, searchTerm, sortOption);
   }, [allRecipes, searchTerm, sortOption, sourceFilter]);
 

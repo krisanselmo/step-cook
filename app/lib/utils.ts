@@ -277,7 +277,7 @@ const cleanStepText = (line: string): string => {
 };
 
 function corrigerInstructionsThermomix(texte: string): string {
-  if (!texte) return "";
+  if (!texte) {return "";}
 
   // Cas 1 : Remplacement de //vitesse par "sens inverse / vitesse"
   // On utilise le flag 'g' pour remplacer toutes les occurrences

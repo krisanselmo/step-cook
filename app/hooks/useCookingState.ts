@@ -431,7 +431,7 @@ export const useCookingState = (): UseCookingState => {
 
   // --- Chat IA ---
   const sendChatMessage = async (message: string) => {
-    if (!recipe || isChatLoading) return;
+    if (!recipe || isChatLoading) {return;}
 
     setChatMessages(prev => [...prev, { role: 'user', content: message }]);
     setIsChatLoading(true);
@@ -485,7 +485,7 @@ export const useCookingState = (): UseCookingState => {
   };
 
   const saveChatRecipe = async () => {
-    if (!recipe?.firestoreId) return;
+    if (!recipe?.firestoreId) {return;}
 
     try {
       const res = await fetch(`/api/firestore/recipes/${recipe.firestoreId}`, {
@@ -565,7 +565,8 @@ export const useCookingState = (): UseCookingState => {
     const prompt = (
       new URLSearchParams(window.location.search).get('prompt') || ''
     ).trim();
-    if (!prompt) return;
+
+    if (!prompt) {return;}
     window.history.replaceState(null, '', window.location.pathname);
     generateGeminiRecipe(prompt);
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -4,7 +4,7 @@ import {
   parseRecipe,
   formatMealieToText,
 } from '../utils';
-import { Ingredient, StepParams, Recipe, MealieRecipeDetail } from '../types';
+import { MealieRecipeDetail } from '../types';
 
 describe('parseIngredientLine', () => {
   it('should parse a simple ingredient line', () => {
