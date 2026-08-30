@@ -30,7 +30,10 @@ app/
 ├── api/
 │   ├── gemini/
 │   │   ├── prompt.ts          # Prompt système pour Gemini (format JSON attendu)
-│   │   └── generate/route.ts  # POST - Génère une recette via Gemini
+│   │   ├── generate/route.ts  # POST - Génère une recette via Gemini
+│   │   └── chat/
+│   │       ├── prompt.ts      # Prompt système de l'agent (answer / propose)
+│   │       └── route.ts       # POST - Agent conversationnel sur la recette courante
 │   ├── mealie/
 │   │   ├── recipes/route.ts   # GET - Liste les recettes Mealie
 │   │   ├── detail/route.ts    # GET - Détail d'une recette Mealie
@@ -44,7 +47,7 @@ app/
 ├── hooks/
 │   └── useCookingState.ts     # Hook principal : état global de l'app
 ├── lib/
-│   ├── types.ts               # Interfaces (Recipe, Ingredient, StepParams, Mealie types, SavedRecipeSummary, ThemePlugin)
+│   ├── types.ts               # Interfaces (Recipe, Ingredient, StepParams, Mealie types, SavedRecipeSummary, ChatMessage, RecipeProposal, ThemePlugin)
 │   ├── utils.ts               # Parsing recettes (JSON/texte), extraction params Thermomix, Levenshtein
 │   ├── firebase.ts            # Singleton Firebase Admin SDK (getDb())
 │   └── themes.ts              # Thèmes visuels (couleurs, fonts, radius)
@@ -65,6 +68,22 @@ Les recettes arrivent par 4 chemins, tous convergent vers le type `Recipe` :
 4. **Firestore** : id → API detail → `Recipe` (déjà structuré, pas de parsing)
 
 `parseRecipe()` gère deux modes : JSON (prioritaire) et texte (fallback avec détection de sections).
+
+## Agent conversationnel (chat)
+
+Le chat (`/api/gemini/chat`) est un agent qui reçoit la recette courante, l'historique
+de conversation et le message de l'utilisateur, puis renvoie l'une de deux actions :
+
+- `answer` : une réponse directe (question, conseil, clarification), la recette n'est pas touchée ;
+- `propose` : une **proposition** de recette modifiée, accompagnée de la liste des `changes`.
+
+Une proposition n'est jamais appliquée automatiquement (HITL). Elle est stockée dans le
+message assistant (`ChatMessage.proposal`) avec un statut :
+`pending` → `applied` (l'utilisateur clique « Appliquer ») ou `rejected` (« Ignorer »).
+Appliquer une proposition marque les autres propositions encore en attente comme `stale` :
+elles ont été calculées sur l'ancienne recette et l'écraseraient.
+
+Côté hook : `sendChatMessage()`, `applyProposal(messageId)`, `rejectProposal(messageId)`.
 
 ## Parsing Thermomix
 

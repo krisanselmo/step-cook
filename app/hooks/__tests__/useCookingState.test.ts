@@ -65,6 +65,216 @@ describe('useCookingState', () => {
     );
   });
 
+  describe('agent conversationnel (chat)', () => {
+    const CHAT_RECIPE: Recipe = {
+      title: 'Soupe',
+      ingredients: [{ fullText: '50 g de beurre', keywords: ['beurre'] }],
+      steps: ['Faire fondre le beurre 2 min / 100°C / vitesse 1.'],
+    };
+
+    // Le hook fetch Mealie + recettes sauvegardées au montage : on ne pilote que
+    // l'appel suivant, celui de l'agent.
+    const mockAgentResponse = (payload: unknown, ok = true) => {
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok,
+        json: async () => payload,
+      } as unknown as Response);
+    };
+
+    const renderWithRecipe = async () => {
+      const utils = await renderCookingHook();
+
+      act(() => {
+        utils.result.current.setRecipe(CHAT_RECIPE);
+      });
+
+      return utils;
+    };
+
+    it('affiche une réponse simple sans toucher à la recette', async () => {
+      const { result } = await renderWithRecipe();
+
+      mockAgentResponse({
+        action: 'answer',
+        reply: 'Le sens inverse évite de hacher les morceaux.',
+      });
+
+      await act(async () => {
+        await result.current.sendChatMessage('Pourquoi le sens inverse ?');
+      });
+
+      expect(result.current.chatMessages).toHaveLength(2);
+      expect(result.current.chatMessages[1].content).toBe(
+        'Le sens inverse évite de hacher les morceaux.',
+      );
+      expect(result.current.chatMessages[1].proposal).toBeUndefined();
+      expect(result.current.recipe).toEqual(CHAT_RECIPE);
+    });
+
+    it('envoie la recette et l\'historique à l\'agent', async () => {
+      const { result } = await renderWithRecipe();
+
+      mockAgentResponse({ action: 'answer', reply: 'Oui.' });
+      await act(async () => {
+        await result.current.sendChatMessage('Premier message');
+      });
+
+      mockAgentResponse({ action: 'answer', reply: 'Toujours oui.' });
+      await act(async () => {
+        await result.current.sendChatMessage('Second message');
+      });
+
+      const [url, options] = (global.fetch as jest.Mock).mock.calls.at(-1) as [
+        string,
+        RequestInit,
+      ];
+
+      expect(url).toBe('/api/gemini/chat');
+
+      const body = JSON.parse(options.body as string);
+      expect(body.message).toBe('Second message');
+      expect(body.recipe.title).toBe('Soupe');
+      expect(body.history).toEqual([
+        { role: 'user', content: 'Premier message' },
+        { role: 'assistant', content: 'Oui.' },
+      ]);
+    });
+
+    it('met une proposition en attente sans modifier la recette', async () => {
+      const { result } = await renderWithRecipe();
+
+      mockAgentResponse({
+        action: 'propose',
+        reply: 'Je te propose de remplacer le beurre.',
+        recipe: {
+          title: 'Soupe',
+          ingredients: ["50 g d'huile d'olive"],
+          steps: ["Faire chauffer l'huile 2 min / 100°C / vitesse 1."],
+        },
+        changes: ['Beurre remplacé par de l\'huile d\'olive'],
+      });
+
+      await act(async () => {
+        await result.current.sendChatMessage('Remplace le beurre');
+      });
+
+      const proposal = result.current.chatMessages[1].proposal;
+      expect(proposal?.status).toBe('pending');
+      expect(proposal?.changes).toHaveLength(1);
+      expect(proposal?.recipe.ingredients[0].fullText).toBe("50 g d'huile d'olive");
+      // Tant que l'utilisateur n'a pas validé, la recette courante est intacte
+      expect(result.current.recipe).toEqual(CHAT_RECIPE);
+    });
+
+    it('applique une proposition validée par l\'utilisateur', async () => {
+      const { result } = await renderWithRecipe();
+
+      mockAgentResponse({
+        action: 'propose',
+        reply: 'Proposition',
+        recipe: {
+          title: 'Soupe à l\'huile',
+          ingredients: ["50 g d'huile d'olive"],
+          steps: ["Faire chauffer l'huile 2 min / 100°C / vitesse 1."],
+        },
+        changes: ['Beurre remplacé'],
+      });
+
+      await act(async () => {
+        await result.current.sendChatMessage('Remplace le beurre');
+      });
+
+      const messageId = result.current.chatMessages[1].id;
+
+      act(() => {
+        result.current.applyProposal(messageId);
+      });
+
+      expect(result.current.recipe?.title).toBe('Soupe à l\'huile');
+      expect(result.current.recipe?.ingredients[0].fullText).toBe(
+        "50 g d'huile d'olive",
+      );
+      expect(result.current.chatMessages[1].proposal?.status).toBe('applied');
+    });
+
+    it('laisse la recette inchangée quand la proposition est refusée', async () => {
+      const { result } = await renderWithRecipe();
+
+      mockAgentResponse({
+        action: 'propose',
+        reply: 'Proposition',
+        recipe: { title: 'Autre', ingredients: ['x'], steps: ['y'] },
+        changes: [],
+      });
+
+      await act(async () => {
+        await result.current.sendChatMessage('Change tout');
+      });
+
+      const messageId = result.current.chatMessages[1].id;
+
+      act(() => {
+        result.current.rejectProposal(messageId);
+      });
+
+      expect(result.current.recipe).toEqual(CHAT_RECIPE);
+      expect(result.current.chatMessages[1].proposal?.status).toBe('rejected');
+    });
+
+    it('marque les autres propositions en attente comme obsolètes après application', async () => {
+      const { result } = await renderWithRecipe();
+
+      mockAgentResponse({
+        action: 'propose',
+        reply: 'Proposition 1',
+        recipe: { title: 'V1', ingredients: ['a'], steps: ['b'] },
+        changes: [],
+      });
+      await act(async () => {
+        await result.current.sendChatMessage('Change A');
+      });
+
+      mockAgentResponse({
+        action: 'propose',
+        reply: 'Proposition 2',
+        recipe: { title: 'V2', ingredients: ['c'], steps: ['d'] },
+        changes: [],
+      });
+      await act(async () => {
+        await result.current.sendChatMessage('Change B');
+      });
+
+      const firstId = result.current.chatMessages[1].id;
+
+      act(() => {
+        result.current.applyProposal(firstId);
+      });
+
+      expect(result.current.recipe?.title).toBe('V1');
+      expect(result.current.chatMessages[1].proposal?.status).toBe('applied');
+      expect(result.current.chatMessages[3].proposal?.status).toBe('stale');
+
+      // Une proposition obsolète ne peut plus écraser la recette
+      act(() => {
+        result.current.applyProposal(result.current.chatMessages[3].id);
+      });
+      expect(result.current.recipe?.title).toBe('V1');
+    });
+
+    it('affiche un message d\'erreur quand l\'agent échoue', async () => {
+      const { result } = await renderWithRecipe();
+
+      mockAgentResponse({ error: 'boom' }, false);
+
+      await act(async () => {
+        await result.current.sendChatMessage('Salut');
+      });
+
+      expect(result.current.chatMessages[1].isError).toBe(true);
+      expect(result.current.recipe).toEqual(CHAT_RECIPE);
+    });
+  });
+
   describe('theme persistence (localStorage)', () => {
     it('persists the selected theme to localStorage', async () => {
       const { result } = await renderCookingHook();

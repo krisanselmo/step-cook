@@ -33,10 +33,30 @@ export interface SavedRecipeSummary {
   createdAt: string;
 }
 
+/**
+ * Statut d'une proposition de modification soumise à l'utilisateur.
+ * - `pending`  : en attente de décision
+ * - `applied`  : acceptée, la recette courante a été remplacée
+ * - `rejected` : refusée
+ * - `stale`    : caduque, la recette a changé depuis (une autre proposition a été
+ *                appliquée), l'appliquer écraserait ces modifications
+ */
+export type ProposalStatus = 'pending' | 'applied' | 'rejected' | 'stale';
+
+/** Modification proposée par l'agent, appliquée uniquement après validation. */
+export interface RecipeProposal {
+  recipe: Recipe;
+  changes: string[];
+  status: ProposalStatus;
+}
+
 export interface ChatMessage {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
-  changes?: string[];
+  proposal?: RecipeProposal;
+  /** Message d'erreur (échec de l'appel à l'agent) plutôt que réponse de l'agent. */
+  isError?: boolean;
 }
 
 export interface MealieRecipeSummary {

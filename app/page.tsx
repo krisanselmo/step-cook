@@ -36,6 +36,8 @@ export default function Home() {
     chatMessages,
     isChatLoading,
     sendChatMessage,
+    applyProposal,
+    rejectProposal,
     saveChatRecipe,
     cookedModalOpen,
     setCookedModalOpen,
@@ -124,6 +126,8 @@ export default function Home() {
           chatMessages={chatMessages}
           isChatLoading={isChatLoading}
           sendChatMessage={sendChatMessage}
+          applyProposal={applyProposal}
+          rejectProposal={rejectProposal}
           saveChatRecipe={saveChatRecipe}
           cookedModalOpen={cookedModalOpen}
           setCookedModalOpen={setCookedModalOpen}

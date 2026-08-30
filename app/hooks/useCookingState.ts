@@ -11,10 +11,11 @@ import {
   SavedRecipeSummary,
   ThemePlugin,
 } from '@/app/lib/types';
-import { parseIngredientLine } from '@/app/lib/utils';
 import { defaultTheme, THEMES } from '@/app/lib/themes';
 import {
   parseRecipe,
+  parseIngredientLine,
+  cleanStepText,
   extractStepParams,
   formatMealieToText,
   isKeywordInText,
@@ -22,6 +23,11 @@ import {
 
 export type ViewState = 'input' | 'processing' | 'cooking';
 export type SortOption = 'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc';
+
+// Identifiant local d'un message de chat : sert de clé de rendu et d'ancre pour
+// accepter/refuser une proposition (l'index bougerait au fil de la conversation).
+let messageIdCounter = 0;
+const createMessageId = (): string => `msg-${++messageIdCounter}`;
 
 interface UseCookingState {
   view: ViewState;
@@ -54,6 +60,8 @@ interface UseCookingState {
   chatMessages: ChatMessage[];
   isChatLoading: boolean;
   sendChatMessage: (message: string) => Promise<void>;
+  applyProposal: (messageId: string) => void;
+  rejectProposal: (messageId: string) => void;
   saveChatRecipe: () => Promise<void>;
   cookedModalOpen: boolean;
   setCookedModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -429,59 +437,122 @@ export const useCookingState = (): UseCookingState => {
     }, 800);
   };
 
-  // --- Chat IA ---
+  // --- Agent conversationnel ---
+  // L'agent répond directement, ou propose une recette modifiée. Une proposition
+  // n'est jamais appliquée d'office : elle attend la validation de l'utilisateur
+  // (applyProposal / rejectProposal).
   const sendChatMessage = async (message: string) => {
     if (!recipe || isChatLoading) {return;}
 
-    setChatMessages(prev => [...prev, { role: 'user', content: message }]);
+    const history = chatMessages.map(({ role, content }) => ({ role, content }));
+
+    setChatMessages(prev => [
+      ...prev,
+      { id: createMessageId(), role: 'user', content: message },
+    ]);
     setIsChatLoading(true);
 
     try {
-      const res = await fetch('/api/gemini/edit', {
+      const res = await fetch('/api/gemini/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipe, message }),
+        body: JSON.stringify({ recipe, message, history }),
       });
 
       if (!res.ok) {
-        throw new Error('Erreur modification');
+        throw new Error('Erreur assistant');
       }
 
       const data = await res.json();
-      const editedRecipe = data.recipe;
 
-      // Rebuild ingredients with keywords
-      const updatedRecipe: Recipe = {
-        ...recipe,
-        title: editedRecipe.title,
-        description: editedRecipe.description,
-        prepTime: editedRecipe.prepTime,
-        cookTime: editedRecipe.cookTime,
-        totalTime: editedRecipe.totalTime,
-        ingredients: Array.isArray(editedRecipe.ingredients)
-          ? editedRecipe.ingredients.map((ing: string) => parseIngredientLine(ing))
-          : recipe.ingredients,
-        steps: editedRecipe.steps || recipe.steps,
-      };
+      // Une proposition porte la recette complète modifiée : on la prépare tout de
+      // suite (mots-clés des ingrédients, notation Thermomix) pour que « Appliquer »
+      // se réduise à un remplacement d'état.
+      const proposedRecipe =
+        data.action === 'propose' && data.recipe
+          ? {
+            ...recipe,
+            title: data.recipe.title ?? recipe.title,
+            description: data.recipe.description,
+            prepTime: data.recipe.prepTime,
+            cookTime: data.recipe.cookTime,
+            totalTime: data.recipe.totalTime,
+            ingredients: Array.isArray(data.recipe.ingredients)
+              ? data.recipe.ingredients.map((ing: string) => parseIngredientLine(ing))
+              : recipe.ingredients,
+            steps: Array.isArray(data.recipe.steps)
+              ? data.recipe.steps.map((step: string) => cleanStepText(step))
+              : recipe.steps,
+          }
+          : null;
 
-      setRecipe(updatedRecipe);
       setChatMessages(prev => [
         ...prev,
         {
+          id: createMessageId(),
           role: 'assistant',
-          content: 'Recette modifiée.',
-          changes: data.changes,
+          content: data.reply,
+          ...(proposedRecipe
+            ? {
+              proposal: {
+                recipe: proposedRecipe,
+                changes: Array.isArray(data.changes) ? data.changes : [],
+                status: 'pending' as const,
+              },
+            }
+            : {}),
         },
       ]);
     } catch (err) {
       console.error(err);
       setChatMessages(prev => [
         ...prev,
-        { role: 'assistant', content: 'Erreur lors de la modification.' },
+        {
+          id: createMessageId(),
+          role: 'assistant',
+          content: "Erreur lors de l'échange avec l'assistant.",
+          isError: true,
+        },
       ]);
     } finally {
       setIsChatLoading(false);
     }
+  };
+
+  /** Accepte une proposition : elle devient la recette courante. */
+  const applyProposal = (messageId: string) => {
+    const target = chatMessages.find(msg => msg.id === messageId);
+
+    if (target?.proposal?.status !== 'pending') {return;}
+
+    setRecipe(target.proposal.recipe);
+    setCheckedIngredients(new Set());
+    setChatMessages(prev =>
+      prev.map(msg => {
+        if (!msg.proposal || msg.proposal.status !== 'pending') {return msg;}
+
+        // Les autres propositions en attente ont été calculées sur l'ancienne
+        // recette : les appliquer ensuite écraserait celle qu'on vient d'accepter.
+        return {
+          ...msg,
+          proposal: {
+            ...msg.proposal,
+            status: msg.id === messageId ? 'applied' : 'stale',
+          },
+        };
+      }),
+    );
+  };
+
+  /** Refuse une proposition : la recette courante reste inchangée. */
+  const rejectProposal = (messageId: string) => {
+    setChatMessages(prev =>
+      prev.map(msg =>
+        msg.id === messageId && msg.proposal?.status === 'pending'
+          ? { ...msg, proposal: { ...msg.proposal, status: 'rejected' } }
+          : msg,
+      ),
+    );
   };
 
   const saveChatRecipe = async () => {
@@ -500,7 +571,7 @@ export const useCookingState = (): UseCookingState => {
 
       setChatMessages(prev => [
         ...prev,
-        { role: 'assistant', content: 'Recette sauvegardée.' },
+        { id: createMessageId(), role: 'assistant', content: 'Recette sauvegardée.' },
       ]);
     } catch (err) {
       console.error(err);
@@ -669,6 +740,8 @@ export const useCookingState = (): UseCookingState => {
     chatMessages,
     isChatLoading,
     sendChatMessage,
+    applyProposal,
+    rejectProposal,
     saveChatRecipe,
     cookedModalOpen,
     setCookedModalOpen,
