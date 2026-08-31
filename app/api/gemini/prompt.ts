@@ -1,6 +1,18 @@
-export const PROMPT = `Agis comme un assistant culinaire expert. Je vais te fournir une liste d'ingrédient, des idées ou une recette et tu dois adapter la recette pour utiliser le thermomix. la convertir strictement au format JSON pour mon application de cuisine.
+import { buildEquipmentPromptBlock } from '@/app/lib/equipment';
 
-Voici les ustensiles disponibles sur le thermomix : fouet, varoma, panier cuisson, gobelet doseur, épluche légume. 
+/**
+ * Pré-prompt de génération de recette.
+ *
+ * Le bloc « matériel » est construit à partir de la configuration de
+ * l'utilisateur : l'IA ne doit proposer que des étapes réalisables avec les
+ * accessoires qu'il possède réellement.
+ *
+ * `ownedEquipment` absent → configuration par défaut (matériel fourni d'origine).
+ */
+export const buildPrompt = (ownedEquipment?: unknown): string =>
+  `Agis comme un assistant culinaire expert. Je vais te fournir une liste d'ingrédient, des idées ou une recette et tu dois adapter la recette pour utiliser le thermomix. la convertir strictement au format JSON pour mon application de cuisine.
+
+${buildEquipmentPromptBlock(ownedEquipment)}
 
 Voici le schéma JSON attendu :
 {

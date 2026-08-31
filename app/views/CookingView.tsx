@@ -31,9 +31,14 @@ import {
   Send,
   Save,
   AlertTriangle,
+  Wrench,
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/Button';
 import { ThemeDropdown } from '@/app/components/ui/ThemeDropdown';
+import { EquipmentModal, getEquipmentIcon } from '@/app/components/ui/EquipmentModal';
+import { StepAccessories } from '@/app/components/ui/StepAccessories';
+import { detectStepAccessories } from '@/app/lib/utils';
+import { getEquipmentItem } from '@/app/lib/equipment';
 import { useCookingState } from '@/app/hooks/useCookingState';
 
 interface CookingViewProps {
@@ -74,6 +79,13 @@ interface CookingViewProps {
   setUploadSuccess: ReturnType<typeof useCookingState>['setUploadSuccess'];
   stepParams: ReturnType<typeof useCookingState>['stepParams'];
   stepIngredients: ReturnType<typeof useCookingState>['stepIngredients'];
+  stepAccessories: ReturnType<typeof useCookingState>['stepAccessories'];
+  ownedEquipment: ReturnType<typeof useCookingState>['ownedEquipment'];
+  toggleEquipment: ReturnType<typeof useCookingState>['toggleEquipment'];
+  equipmentModalOpen: ReturnType<typeof useCookingState>['equipmentModalOpen'];
+  setEquipmentModalOpen: ReturnType<
+    typeof useCookingState
+  >['setEquipmentModalOpen'];
   checkedIngredients: ReturnType<typeof useCookingState>['checkedIngredients'];
   setCheckedIngredients: ReturnType<
     typeof useCookingState
@@ -123,6 +135,11 @@ export const CookingView: React.FC<CookingViewProps> = ({
   uploadSuccess,
   stepParams,
   stepIngredients,
+  stepAccessories,
+  ownedEquipment,
+  toggleEquipment,
+  equipmentModalOpen,
+  setEquipmentModalOpen,
   checkedIngredients,
   fileInputRef,
   t,
@@ -188,6 +205,14 @@ export const CookingView: React.FC<CookingViewProps> = ({
               <Globe size={16} />
             </a>
           )}
+          <button
+            onClick={() => setEquipmentModalOpen(true)}
+            className={`transition-colors ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}
+            aria-label="Mon matériel"
+            title="Mon matériel"
+          >
+            <Wrench size={16} />
+          </button>
           {isGeminiConfigured && (
             <button
               onClick={() => setChatOpen(true)}
@@ -319,7 +344,10 @@ export const CookingView: React.FC<CookingViewProps> = ({
                       <span className={`text-xs font-bold shrink-0 w-6 h-6 -mt-0.5 rounded-full flex items-center justify-center ${t('bg-gray-800 text-gray-400', 'bg-gray-100 text-gray-500')}`}>
                         {i + 1}
                       </span>
-                      <p className={`text-sm leading-relaxed ${t('text-gray-300', 'text-gray-600')}`}>{step}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm leading-relaxed ${t('text-gray-300', 'text-gray-600')}`}>{step}</p>
+                        <StepAccessoryTags step={step} theme={theme} t={t} />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -466,6 +494,16 @@ export const CookingView: React.FC<CookingViewProps> = ({
                 );
               })()}
 
+              {/* Accessoire de l'étape (Varoma, Découpe-minute…) */}
+              <StepAccessories
+                accessories={stepAccessories}
+                ownedEquipment={ownedEquipment}
+                isTimerRunning={isTimerRunning}
+                onConfigure={() => setEquipmentModalOpen(true)}
+                theme={theme}
+                t={t}
+              />
+
               {/* Step Ingredients List */}
               {stepIngredients.length > 0 && (
                 <div className="flex flex-wrap justify-center gap-2 mt-8 opacity-90">
@@ -547,6 +585,17 @@ export const CookingView: React.FC<CookingViewProps> = ({
           theme={theme}
           t={t}
         />}
+
+        {/* Configuration du matériel */}
+        {equipmentModalOpen && (
+          <EquipmentModal
+            ownedEquipment={ownedEquipment}
+            toggleEquipment={toggleEquipment}
+            onClose={() => setEquipmentModalOpen(false)}
+            theme={theme}
+            t={t}
+          />
+        )}
 
         {/* Modal "Je l'ai cuisiné" (Upload) */}
         {cookedModalOpen && (
@@ -647,6 +696,46 @@ export const CookingView: React.FC<CookingViewProps> = ({
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+/**
+ * Pastilles d'accessoires affichées sous chaque étape dans l'aperçu de la
+ * recette, pour repérer d'un coup d'œil celles qui demandent du matériel.
+ */
+const StepAccessoryTags: React.FC<{
+  step: string;
+  theme: ThemePlugin;
+  t: (dark: string, light: string) => string;
+}> = ({ step, theme, t }) => {
+  const accessories = detectStepAccessories(step);
+
+  if (accessories.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-1.5">
+      {accessories.map(accessory => {
+        const item = getEquipmentItem(accessory.id);
+
+        if (!item) {
+          return null;
+        }
+
+        const Icon = getEquipmentIcon(item.id);
+
+        return (
+          <span
+            key={item.id}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full ${t('bg-gray-800 text-gray-400', 'bg-gray-100 text-gray-500')}`}
+          >
+            <Icon size={10} className={theme.colors.accent} />
+            {item.name}
+          </span>
+        );
+      })}
     </div>
   );
 };

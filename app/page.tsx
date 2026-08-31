@@ -56,6 +56,11 @@ export default function Home() {
     setUploadSuccess,
     stepParams,
     stepIngredients,
+    stepAccessories,
+    ownedEquipment,
+    toggleEquipment,
+    equipmentModalOpen,
+    setEquipmentModalOpen,
     checkedIngredients,
     setCheckedIngredients,
     fileInputRef,
@@ -108,6 +113,10 @@ export default function Home() {
           fetchSavedRecipes={fetchSavedRecipes}
           loadSavedRecipe={loadSavedRecipe}
           deleteSavedRecipe={deleteSavedRecipe}
+          ownedEquipment={ownedEquipment}
+          toggleEquipment={toggleEquipment}
+          equipmentModalOpen={equipmentModalOpen}
+          setEquipmentModalOpen={setEquipmentModalOpen}
         />
       );
     case 'processing':
@@ -152,6 +161,11 @@ export default function Home() {
           setUploadSuccess={setUploadSuccess}
           stepParams={stepParams}
           stepIngredients={stepIngredients}
+          stepAccessories={stepAccessories}
+          ownedEquipment={ownedEquipment}
+          toggleEquipment={toggleEquipment}
+          equipmentModalOpen={equipmentModalOpen}
+          setEquipmentModalOpen={setEquipmentModalOpen}
           checkedIngredients={checkedIngredients}
           setCheckedIngredients={setCheckedIngredients}
           fileInputRef={fileInputRef}

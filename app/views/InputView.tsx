@@ -17,9 +17,11 @@ import {
   Trash2,
   AlertTriangle,
   RefreshCw,
+  Wrench,
 } from 'lucide-react';
 import {Button} from '@/app/components/ui/Button';
 import {ThemeDropdown} from '@/app/components/ui/ThemeDropdown';
+import {EquipmentModal} from '@/app/components/ui/EquipmentModal';
 import {SortOption, useCookingState} from '@/app/hooks/useCookingState';
 import {SavedRecipeSummary, MealieRecipeSummary, ThemePlugin} from '@/app/lib/types';
 
@@ -179,6 +181,12 @@ interface InputViewProps {
   fetchSavedRecipes: () => Promise<void>;
   loadSavedRecipe: (id: string) => Promise<void>;
   deleteSavedRecipe: (id: string) => Promise<void>;
+  ownedEquipment: ReturnType<typeof useCookingState>['ownedEquipment'];
+  toggleEquipment: ReturnType<typeof useCookingState>['toggleEquipment'];
+  equipmentModalOpen: ReturnType<typeof useCookingState>['equipmentModalOpen'];
+  setEquipmentModalOpen: ReturnType<
+    typeof useCookingState
+  >['setEquipmentModalOpen'];
 }
 
 // Classes littérales : Tailwind ne détecte pas les noms construits à l'exécution.
@@ -216,6 +224,10 @@ export const InputView: React.FC<InputViewProps> = ({
   fetchSavedRecipes,
   loadSavedRecipe,
   deleteSavedRecipe,
+  ownedEquipment,
+  toggleEquipment,
+  equipmentModalOpen,
+  setEquipmentModalOpen,
 }) => {
   const ThemeIcon = theme.icon;
   const [activeTab, setActiveTab] = useState<'recipes' | 'manual' | 'ai'>(
@@ -287,6 +299,14 @@ export const InputView: React.FC<InputViewProps> = ({
       className={`min-h-screen ${theme.properties.font} flex flex-col items-center justify-center p-4 transition-colors duration-300 ${t(theme.colors.rootBgDark, theme.colors.rootBgLight)}`}
     >
       <div className="absolute top-4 right-4 z-10 flex gap-2 items-center">
+        <button
+          onClick={() => setEquipmentModalOpen(true)}
+          aria-label="Mon matériel"
+          title="Mon matériel"
+          className={`p-2 rounded-full transition-colors ${t('bg-gray-800 text-gray-400 hover:text-white', 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200 shadow-sm')}`}
+        >
+          <Wrench size={20}/>
+        </button>
         <ThemeDropdown
           currentTheme={theme}
           setThemeId={setActiveThemeId}
@@ -520,6 +540,17 @@ export const InputView: React.FC<InputViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Configuration du matériel */}
+      {equipmentModalOpen && (
+        <EquipmentModal
+          ownedEquipment={ownedEquipment}
+          toggleEquipment={toggleEquipment}
+          onClose={() => setEquipmentModalOpen(false)}
+          theme={theme}
+          t={t}
+        />
+      )}
 
       {/* Modale de confirmation de suppression */}
       {deleteTarget && (

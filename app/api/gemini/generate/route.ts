@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-import {PROMPT} from "@/app/api/gemini/prompt";
+import { buildPrompt } from "@/app/api/gemini/prompt";
 
 export async function POST(req: NextRequest) {
   try {
-    const { userPrompt } = await req.json();
+    const { userPrompt, equipment } = await req.json();
 
     if (!userPrompt) {
       return NextResponse.json(
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    const fullPrompt = `${PROMPT}\n\nDirective utilisateur: "${userPrompt}"\n\nRecette générée:`;
+    const fullPrompt = `${buildPrompt(equipment)}\n\nDirective utilisateur: "${userPrompt}"\n\nRecette générée:`;
 
     const response = await ai.models.generateContent({
       model: modelName,

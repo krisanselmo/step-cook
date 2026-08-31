@@ -4,6 +4,7 @@ import '@testing-library/jest-dom';
 import { CookingView } from '../CookingView';
 import { useCookingState } from '@/app/hooks/useCookingState';
 import { ChatMessage, Recipe, StepParams } from '@/app/lib/types';
+import { DEFAULT_EQUIPMENT_IDS } from '@/app/lib/equipment';
 
 // Mock the useCookingState hook
 jest.mock('@/app/hooks/useCookingState');
@@ -51,6 +52,8 @@ describe('CookingView', () => {
   let mockSetIsUploading: jest.Mock;
   let mockSetUploadSuccess: jest.Mock;
   let mockSetCheckedIngredients: jest.Mock;
+  let mockToggleEquipment: jest.Mock;
+  let mockSetEquipmentModalOpen: jest.Mock;
   let mockOpenMealiePage: jest.Mock;
   let mockFormatTime: jest.Mock;
   let mockHandleIngredientAction: jest.Mock;
@@ -77,6 +80,8 @@ describe('CookingView', () => {
     mockSetIsUploading = jest.fn();
     mockSetUploadSuccess = jest.fn();
     mockSetCheckedIngredients = jest.fn();
+    mockToggleEquipment = jest.fn();
+    mockSetEquipmentModalOpen = jest.fn();
     mockOpenMealiePage = jest.fn();
     mockFormatTime = jest.fn((seconds: number) => {
       const m = Math.floor(seconds / 60);
@@ -152,6 +157,11 @@ const baseProps = {
       setUploadSuccess: mockSetUploadSuccess,
       stepParams: defaultStepParams,
       stepIngredients: [],
+      stepAccessories: [],
+      ownedEquipment: DEFAULT_EQUIPMENT_IDS,
+      toggleEquipment: mockToggleEquipment,
+      equipmentModalOpen: false,
+      setEquipmentModalOpen: mockSetEquipmentModalOpen,
       checkedIngredients: new Set<string>(),
       setCheckedIngredients: mockSetCheckedIngredients,
       fileInputRef: { current: null },

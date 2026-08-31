@@ -1,5 +1,6 @@
 import { Ingredient, StepParams, Recipe, MealieRecipeDetail } from './types';
 import { distance } from 'fastest-levenshtein';
+import { CUTTER_ID, CUTTER_MODES, EQUIPMENT, VAROMA_ID } from './equipment';
 
 const normalizeText = (text: string): string => {
   return text
@@ -269,6 +270,50 @@ export const extractStepParams = (text: string): StepParams => {
   }
 
   return { time, temp, speed, seconds, reverse };
+};
+
+/** Accessoire requis par une étape, tel que détecté dans son texte. */
+export interface StepAccessory {
+  /** Id d'un `EquipmentItem` du catalogue. */
+  id: string;
+  /** Mode de coupe, uniquement pour le Découpe-minute (absent si non précisé). */
+  cutterMode?: string;
+}
+
+/**
+ * Repère les accessoires mentionnés dans une étape, pour afficher un visuel
+ * dédié pendant la cuisson.
+ *
+ * `temp` (issue d'`extractStepParams`) permet d'attraper le Varoma quand il
+ * n'apparaît que comme température, sans être nommé dans la phrase.
+ */
+export const detectStepAccessories = (
+  text: string,
+  temp?: string,
+): StepAccessory[] => {
+  const normalized = normalizeText(text || '');
+  const isVaromaTemp = (temp || '').toUpperCase().includes('VAROMA');
+
+  const accessories: StepAccessory[] = [];
+
+  for (const item of EQUIPMENT) {
+    const matches =
+      item.pattern.test(normalized) || (item.id === VAROMA_ID && isVaromaTemp);
+
+    if (!matches) {
+      continue;
+    }
+
+    if (item.id === CUTTER_ID) {
+      const mode = CUTTER_MODES.find(m => m.pattern.test(normalized));
+
+      accessories.push({ id: item.id, cutterMode: mode?.id });
+    } else {
+      accessories.push({ id: item.id });
+    }
+  }
+
+  return accessories;
 };
 
 // Fonction utilitaire pour nettoyer le texte des étapes (gestion des //)

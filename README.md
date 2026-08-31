@@ -14,6 +14,21 @@ robot, on affiche la recette en mode pas-à-pas sur le **smartphone posé à cô
 avec les paramètres (temps, température, vitesse, sens inverse) extraits
 automatiquement à chaque étape.
 
+## Mon matériel
+
+Chacun n'a pas les mêmes accessoires. Step Cook permet de cocher le matériel
+que l'on possède réellement (Varoma, Découpe-minute, fouet, épluche-légumes…) :
+
+- l'**assistant IA** reçoit cette liste dans son pré-prompt et ne propose que
+  des étapes réalisables — le matériel absent lui est explicitement interdit ;
+- pendant la cuisson, une étape qui demande un accessoire affiche un **panneau
+  dédié** : le montage du Varoma avec sa vapeur animée, ou les **4 modes du
+  Découpe-minute** (tranches fines/épaisses, râpé fin/épais) avec le mode de
+  l'étape mis en avant et la vitesse conseillée.
+
+La configuration est locale à l'appareil (`localStorage`), aucun service externe
+n'est nécessaire.
+
 ## Captures d'écran
 
 | Accueil | Thème « Chez Gusteau » (mode clair) |

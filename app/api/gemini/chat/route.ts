@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from '@google/genai';
-import { AGENT_PROMPT } from './prompt';
+import { buildAgentPrompt } from './prompt';
 
 /** Nombre de tours de conversation renvoyés au modèle (borne la taille du prompt). */
 const MAX_HISTORY_MESSAGES = 12;
@@ -46,7 +46,7 @@ const toCleanStringArray = (value: unknown): string[] =>
 
 export async function POST(req: NextRequest) {
   try {
-    const { recipe, message, history } = await req.json();
+    const { recipe, message, history, equipment } = await req.json();
 
     if (!recipe || typeof message !== 'string' || message.trim() === '') {
       return NextResponse.json(
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       model: modelName,
       contents,
       config: {
-        systemInstruction: AGENT_PROMPT,
+        systemInstruction: buildAgentPrompt(equipment),
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA,
       },
