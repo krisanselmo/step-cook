@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { CookingView } from '../CookingView';
 import { useCookingState } from '@/app/hooks/useCookingState';
-import { Recipe, StepParams } from '@/app/lib/types';
+import { ChatMessage, Recipe, StepParams } from '@/app/lib/types';
 
 // Mock the useCookingState hook
 jest.mock('@/app/hooks/useCookingState');
@@ -42,6 +42,8 @@ describe('CookingView', () => {
   let mockSetActiveThemeId: jest.Mock;
   let mockSetChatOpen: jest.Mock;
   let mockSendChatMessage: jest.Mock;
+  let mockApplyProposal: jest.Mock;
+  let mockRejectProposal: jest.Mock;
   let mockSaveChatRecipe: jest.Mock;
   let mockSetCookedModalOpen: jest.Mock;
   let mockSetSelectedImage: jest.Mock;
@@ -66,6 +68,8 @@ describe('CookingView', () => {
     mockSetActiveThemeId = jest.fn();
     mockSetChatOpen = jest.fn();
     mockSendChatMessage = jest.fn();
+    mockApplyProposal = jest.fn();
+    mockRejectProposal = jest.fn();
     mockSaveChatRecipe = jest.fn();
     mockSetCookedModalOpen = jest.fn();
     mockSetSelectedImage = jest.fn();
@@ -84,7 +88,9 @@ describe('CookingView', () => {
     mockHandleFileChange = jest.fn();
     mockHandleUpload = jest.fn();
 
-    const baseProps = {
+    const isDarkMode = true;
+
+const baseProps = {
       view: 'cooking' as const,
       setView: mockSetView,
       recipe: mockRecipe,
@@ -95,7 +101,7 @@ describe('CookingView', () => {
       isTimerRunning: false,
       setIsTimerRunning: mockSetIsTimerRunning,
       currentTime: '12:00',
-      isDarkMode: true,
+      isDarkMode,
       setIsDarkMode: mockSetIsDarkMode,
       theme: {
         id: 'default',
@@ -128,7 +134,12 @@ describe('CookingView', () => {
       chatMessages: [],
       isChatLoading: false,
       sendChatMessage: mockSendChatMessage,
+      applyProposal: mockApplyProposal,
+      rejectProposal: mockRejectProposal,
       saveChatRecipe: mockSaveChatRecipe,
+      hasUnsavedChanges: false,
+      isSavingChatRecipe: false,
+      isGeminiConfigured: true,
       cookedModalOpen: false,
       setCookedModalOpen: mockSetCookedModalOpen,
       selectedImage: null,
@@ -141,11 +152,11 @@ describe('CookingView', () => {
       setUploadSuccess: mockSetUploadSuccess,
       stepParams: defaultStepParams,
       stepIngredients: [],
-      checkedIngredients: new Set(),
+      checkedIngredients: new Set<string>(),
       setCheckedIngredients: mockSetCheckedIngredients,
       fileInputRef: { current: null },
       t: jest.fn((darkClass: string, lightClass: string) =>
-        baseProps.isDarkMode ? darkClass : lightClass,
+        isDarkMode ? darkClass : lightClass,
       ),
       openMealiePage: mockOpenMealiePage,
       formatTime: mockFormatTime,
@@ -319,6 +330,94 @@ describe('CookingView', () => {
       });
       fireEvent.click(toggleButton);
       expect(mockSetIsDarkMode).toHaveBeenCalledWith(true);
+    });
+  });
+
+  it('hides the AI assistant button when Gemini is not configured', () => {
+    render(<CookingView {...getMockedDefaultProps({ isGeminiConfigured: false })} />);
+    expect(screen.queryByLabelText('Assistant IA')).not.toBeInTheDocument();
+  });
+
+  it('shows the AI assistant button when Gemini is configured', () => {
+    render(<CookingView {...getMockedDefaultProps()} />);
+    expect(screen.getByLabelText('Assistant IA')).toBeInTheDocument();
+  });
+
+  describe('Chat Panel (agent + validation humaine)', () => {
+    const proposalMessages = (
+      status: 'pending' | 'applied' | 'rejected' | 'stale',
+    ): ChatMessage[] => [
+      { id: 'm1', role: 'user', content: 'Remplace le beurre' },
+      {
+        id: 'm2',
+        role: 'assistant',
+        content: "Je te propose de remplacer le beurre par de l'huile d'olive.",
+        proposal: {
+          recipe: { ...mockRecipe, title: 'Recette modifiée' },
+          changes: ["Étape 1 : beurre remplacé par de l'huile d'olive"],
+          status,
+        },
+      },
+    ];
+
+    const renderChat = (messages: ChatMessage[]) => {
+      const props = getMockedDefaultProps({
+        chatOpen: true,
+        chatMessages: messages,
+      });
+
+      mockUseCookingState.mockReturnValue(props);
+      render(<CookingView {...props} />);
+    };
+
+    it('affiche la réponse de l\'agent sans proposition', () => {
+      renderChat([
+        { id: 'm1', role: 'assistant', content: 'Le sens inverse évite de hacher.' },
+      ]);
+
+      expect(screen.getByText('Le sens inverse évite de hacher.')).toBeInTheDocument();
+      expect(screen.queryByText('Modifications proposées')).not.toBeInTheDocument();
+    });
+
+    it('affiche les modifications proposées et les boutons de validation', () => {
+      renderChat(proposalMessages('pending'));
+
+      expect(screen.getByText('Modifications proposées')).toBeInTheDocument();
+      expect(
+        screen.getByText("Étape 1 : beurre remplacé par de l'huile d'olive"),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Appliquer/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Ignorer/i })).toBeInTheDocument();
+    });
+
+    it('appelle applyProposal avec l\'id du message', () => {
+      renderChat(proposalMessages('pending'));
+
+      fireEvent.click(screen.getByRole('button', { name: /Appliquer/i }));
+      expect(mockApplyProposal).toHaveBeenCalledWith('m2');
+    });
+
+    it('appelle rejectProposal avec l\'id du message', () => {
+      renderChat(proposalMessages('pending'));
+
+      fireEvent.click(screen.getByRole('button', { name: /Ignorer/i }));
+      expect(mockRejectProposal).toHaveBeenCalledWith('m2');
+    });
+
+    it('remplace les boutons par un statut une fois la proposition appliquée', () => {
+      renderChat(proposalMessages('applied'));
+
+      expect(screen.getByText('Modifications appliquées')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Appliquer/i })).not.toBeInTheDocument();
+    });
+
+    it('signale une proposition devenue obsolète', () => {
+      renderChat(proposalMessages('stale'));
+
+      expect(
+        screen.getByText(/Proposition obsolète/i),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Appliquer/i })).not.toBeInTheDocument();
     });
   });
 

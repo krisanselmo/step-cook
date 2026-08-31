@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/app/lib/firebase';
+import { getDb, isFirebaseConfigured } from '@/app/lib/firebase';
 import { FieldValue } from 'firebase-admin/firestore';
 
 export async function GET() {
+  if (!isFirebaseConfigured()) {
+    return NextResponse.json({ configured: false });
+  }
+
   try {
     const db = getDb();
     const snapshot = await db

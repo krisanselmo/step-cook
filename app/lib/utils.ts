@@ -272,7 +272,7 @@ export const extractStepParams = (text: string): StepParams => {
 };
 
 // Fonction utilitaire pour nettoyer le texte des étapes (gestion des //)
-const cleanStepText = (line: string): string => {
+export const cleanStepText = (line: string): string => {
   return corrigerInstructionsThermomix(line);
 };
 

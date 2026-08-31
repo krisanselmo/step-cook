@@ -30,6 +30,7 @@ import {
   ListOrdered,
   Send,
   Save,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/Button';
 import { ThemeDropdown } from '@/app/components/ui/ThemeDropdown';
@@ -55,7 +56,12 @@ interface CookingViewProps {
   chatMessages: ReturnType<typeof useCookingState>['chatMessages'];
   isChatLoading: ReturnType<typeof useCookingState>['isChatLoading'];
   sendChatMessage: ReturnType<typeof useCookingState>['sendChatMessage'];
+  applyProposal: ReturnType<typeof useCookingState>['applyProposal'];
+  rejectProposal: ReturnType<typeof useCookingState>['rejectProposal'];
   saveChatRecipe: ReturnType<typeof useCookingState>['saveChatRecipe'];
+  hasUnsavedChanges: ReturnType<typeof useCookingState>['hasUnsavedChanges'];
+  isSavingChatRecipe: ReturnType<typeof useCookingState>['isSavingChatRecipe'];
+  isGeminiConfigured: ReturnType<typeof useCookingState>['isGeminiConfigured'];
   cookedModalOpen: ReturnType<typeof useCookingState>['cookedModalOpen'];
   setCookedModalOpen: ReturnType<typeof useCookingState>['setCookedModalOpen'];
   selectedImage: ReturnType<typeof useCookingState>['selectedImage'];
@@ -101,7 +107,12 @@ export const CookingView: React.FC<CookingViewProps> = ({
   chatMessages,
   isChatLoading,
   sendChatMessage,
+  applyProposal,
+  rejectProposal,
   saveChatRecipe,
+  hasUnsavedChanges,
+  isSavingChatRecipe,
+  isGeminiConfigured,
   cookedModalOpen,
   setCookedModalOpen,
   selectedImage,
@@ -177,13 +188,16 @@ export const CookingView: React.FC<CookingViewProps> = ({
               <Globe size={16} />
             </a>
           )}
-          <button
-            onClick={() => setChatOpen(true)}
-            className={`transition-colors ${chatOpen ? 'text-purple-500' : t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}
-            title="Assistant IA"
-          >
-            <Sparkles size={16} />
-          </button>
+          {isGeminiConfigured && (
+            <button
+              onClick={() => setChatOpen(true)}
+              className={`transition-colors ${chatOpen ? 'text-purple-500' : t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}
+              aria-label="Assistant IA"
+              title="Assistant IA"
+            >
+              <Sparkles size={16} />
+            </button>
+          )}
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             aria-label={
@@ -520,12 +534,15 @@ export const CookingView: React.FC<CookingViewProps> = ({
         </div>
 
         {/* Chat IA Panel */}
-        {chatOpen && <ChatPanel
+        {chatOpen && isGeminiConfigured && <ChatPanel
           chatMessages={chatMessages}
           isChatLoading={isChatLoading}
           sendChatMessage={sendChatMessage}
+          applyProposal={applyProposal}
+          rejectProposal={rejectProposal}
           saveChatRecipe={saveChatRecipe}
-          canSave={!!recipe.firestoreId}
+          canSave={!!recipe.firestoreId && hasUnsavedChanges}
+          isSaving={isSavingChatRecipe}
           onClose={() => setChatOpen(false)}
           theme={theme}
           t={t}
@@ -635,14 +652,17 @@ export const CookingView: React.FC<CookingViewProps> = ({
 };
 
 // --- Chat Panel Component ---
-import { ChatMessage, ThemePlugin } from '@/app/lib/types';
+import { ChatMessage, RecipeProposal, ThemePlugin } from '@/app/lib/types';
 
 interface ChatPanelProps {
   chatMessages: ChatMessage[];
   isChatLoading: boolean;
   sendChatMessage: (message: string) => Promise<void>;
+  applyProposal: (messageId: string) => void;
+  rejectProposal: (messageId: string) => void;
   saveChatRecipe: () => Promise<void>;
   canSave: boolean;
+  isSaving: boolean;
   onClose: () => void;
   theme: ThemePlugin;
   t: (dark: string, light: string) => string;
@@ -652,8 +672,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   chatMessages,
   isChatLoading,
   sendChatMessage,
+  applyProposal,
+  rejectProposal,
   saveChatRecipe,
   canSave,
+  isSaving,
   onClose,
   theme,
   t,
@@ -681,9 +704,13 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
           <div className="flex-1">
             <h3 className="font-bold text-sm">Assistant IA</h3>
-            <p className={`text-xs ${t('text-gray-500', 'text-gray-400')}`}>Modifier la recette</p>
+            <p className={`text-xs ${t('text-gray-500', 'text-gray-400')}`}>Questions et modifications</p>
           </div>
-          <button onClick={onClose} className={`p-2 rounded-full ${t('hover:bg-gray-800', 'hover:bg-gray-100')}`}>
+          <button
+            onClick={onClose}
+            aria-label="Fermer"
+            className={`p-2 rounded-full ${t('hover:bg-gray-800', 'hover:bg-gray-100')}`}
+          >
             <X size={18} />
           </button>
         </div>
@@ -691,27 +718,31 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {chatMessages.length === 0 && (
-            <p className={`text-sm text-center py-8 ${t('text-gray-600', 'text-gray-400')}`}>
-              Demandez une modification, ex: &quot;Remplace le beurre par de l&apos;huile d&apos;olive&quot;
-            </p>
+            <div className={`text-sm text-center py-8 space-y-2 ${t('text-gray-600', 'text-gray-400')}`}>
+              <p>Posez une question ou demandez une modification.</p>
+              <p className="text-xs">
+                Ex : &quot;Pourquoi sens inverse à l&apos;étape 3 ?&quot; ou &quot;Remplace le beurre par de l&apos;huile d&apos;olive&quot;
+              </p>
+            </div>
           )}
-          {chatMessages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          {chatMessages.map(msg => (
+            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] px-3 py-2 ${theme.properties.radius} text-sm ${
                 msg.role === 'user'
                   ? `${theme.colors.bgPrimary} text-white`
-                  : t('bg-gray-800 text-gray-200', 'bg-gray-100 text-gray-800')
+                  : msg.isError
+                    ? t('bg-red-900/30 text-red-300', 'bg-red-50 text-red-700')
+                    : t('bg-gray-800 text-gray-200', 'bg-gray-100 text-gray-800')
               }`}>
-                <p>{msg.content}</p>
-                {msg.changes && msg.changes.length > 0 && (
-                  <ul className={`mt-2 space-y-1 text-xs ${t('text-gray-400', 'text-gray-500')}`}>
-                    {msg.changes.map((change, j) => (
-                      <li key={j} className="flex gap-1.5">
-                        <span className="shrink-0">-</span>
-                        <span>{change}</span>
-                      </li>
-                    ))}
-                  </ul>
+                <p className="whitespace-pre-wrap">{msg.content}</p>
+                {msg.proposal && (
+                  <ProposalCard
+                    proposal={msg.proposal}
+                    onApply={() => applyProposal(msg.id)}
+                    onReject={() => rejectProposal(msg.id)}
+                    theme={theme}
+                    t={t}
+                  />
                 )}
               </div>
             </div>
@@ -731,9 +762,12 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           {canSave && (
             <button
               onClick={saveChatRecipe}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium ${theme.properties.radius} transition-colors ${t('bg-green-900/30 text-green-400 hover:bg-green-900/50 border border-green-800', 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200')}`}
+              disabled={isSaving}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium ${theme.properties.radius} transition-colors disabled:opacity-50 ${t('bg-green-900/30 text-green-400 hover:bg-green-900/50 border border-green-800', 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200')}`}
             >
-              <Save size={14} /> Sauvegarder les modifications
+              {isSaving
+                ? <><Loader2 size={14} className="animate-spin" /> Sauvegarde...</>
+                : <><Save size={14} /> Sauvegarder les modifications</>}
             </button>
           )}
           <div className="flex gap-2">
@@ -742,7 +776,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
-              placeholder="Modifier la recette..."
+              placeholder="Poser une question ou demander une modification..."
               disabled={isChatLoading}
               className={`flex-1 px-3 py-2 text-sm ${theme.properties.radius} border outline-none ${t('bg-gray-800 border-gray-700 text-white placeholder:text-gray-500', 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400')}`}
             />
@@ -756,6 +790,84 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+
+// --- Carte de proposition (validation humaine avant application) ---
+interface ProposalCardProps {
+  proposal: RecipeProposal;
+  onApply: () => void;
+  onReject: () => void;
+  theme: ThemePlugin;
+  t: (dark: string, light: string) => string;
+}
+
+const ProposalCard: React.FC<ProposalCardProps> = ({
+  proposal,
+  onApply,
+  onReject,
+  theme,
+  t,
+}) => {
+  const { changes, status } = proposal;
+
+  return (
+    <div className={`mt-3 pt-3 border-t ${t('border-gray-700', 'border-gray-200')}`}>
+      <p className={`text-[11px] font-semibold uppercase tracking-wide mb-1.5 ${t('text-gray-400', 'text-gray-500')}`}>
+        Modifications proposées
+      </p>
+
+      {changes.length > 0 ? (
+        <ul className={`space-y-1 text-xs ${t('text-gray-300', 'text-gray-600')}`}>
+          {changes.map((change, i) => (
+            <li key={i} className="flex gap-1.5">
+              <span className="shrink-0">-</span>
+              <span>{change}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className={`text-xs ${t('text-gray-400', 'text-gray-500')}`}>
+          Nouvelle version de la recette.
+        </p>
+      )}
+
+      {status === 'pending' && (
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={onApply}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium ${theme.properties.radius} transition-colors ${t('bg-green-900/40 text-green-300 hover:bg-green-900/60 border border-green-800', 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200')}`}
+          >
+            <Check size={13} /> Appliquer
+          </button>
+          <button
+            onClick={onReject}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium ${theme.properties.radius} transition-colors ${t('bg-gray-800 text-gray-400 hover:bg-gray-700 border border-gray-700', 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200')}`}
+          >
+            <X size={13} /> Ignorer
+          </button>
+        </div>
+      )}
+
+      {status === 'applied' && (
+        <p className={`flex items-center gap-1.5 mt-3 text-xs font-medium ${t('text-green-400', 'text-green-700')}`}>
+          <Check size={13} /> Modifications appliquées
+        </p>
+      )}
+
+      {status === 'rejected' && (
+        <p className={`flex items-center gap-1.5 mt-3 text-xs ${t('text-gray-500', 'text-gray-400')}`}>
+          <X size={13} /> Proposition ignorée
+        </p>
+      )}
+
+      {status === 'stale' && (
+        <p className={`flex items-center gap-1.5 mt-3 text-xs ${t('text-amber-400', 'text-amber-600')}`}>
+          <AlertTriangle size={13} /> Proposition obsolète : la recette a changé depuis.
+        </p>
+      )}
     </div>
   );
 };
