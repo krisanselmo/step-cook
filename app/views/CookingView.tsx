@@ -59,6 +59,9 @@ interface CookingViewProps {
   applyProposal: ReturnType<typeof useCookingState>['applyProposal'];
   rejectProposal: ReturnType<typeof useCookingState>['rejectProposal'];
   saveChatRecipe: ReturnType<typeof useCookingState>['saveChatRecipe'];
+  hasUnsavedChanges: ReturnType<typeof useCookingState>['hasUnsavedChanges'];
+  isSavingChatRecipe: ReturnType<typeof useCookingState>['isSavingChatRecipe'];
+  isGeminiConfigured: ReturnType<typeof useCookingState>['isGeminiConfigured'];
   cookedModalOpen: ReturnType<typeof useCookingState>['cookedModalOpen'];
   setCookedModalOpen: ReturnType<typeof useCookingState>['setCookedModalOpen'];
   selectedImage: ReturnType<typeof useCookingState>['selectedImage'];
@@ -107,6 +110,9 @@ export const CookingView: React.FC<CookingViewProps> = ({
   applyProposal,
   rejectProposal,
   saveChatRecipe,
+  hasUnsavedChanges,
+  isSavingChatRecipe,
+  isGeminiConfigured,
   cookedModalOpen,
   setCookedModalOpen,
   selectedImage,
@@ -182,14 +188,16 @@ export const CookingView: React.FC<CookingViewProps> = ({
               <Globe size={16} />
             </a>
           )}
-          <button
-            onClick={() => setChatOpen(true)}
-            className={`transition-colors ${chatOpen ? 'text-purple-500' : t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}
-            aria-label="Assistant IA"
-            title="Assistant IA"
-          >
-            <Sparkles size={16} />
-          </button>
+          {isGeminiConfigured && (
+            <button
+              onClick={() => setChatOpen(true)}
+              className={`transition-colors ${chatOpen ? 'text-purple-500' : t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-900')}`}
+              aria-label="Assistant IA"
+              title="Assistant IA"
+            >
+              <Sparkles size={16} />
+            </button>
+          )}
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             aria-label={
@@ -526,14 +534,15 @@ export const CookingView: React.FC<CookingViewProps> = ({
         </div>
 
         {/* Chat IA Panel */}
-        {chatOpen && <ChatPanel
+        {chatOpen && isGeminiConfigured && <ChatPanel
           chatMessages={chatMessages}
           isChatLoading={isChatLoading}
           sendChatMessage={sendChatMessage}
           applyProposal={applyProposal}
           rejectProposal={rejectProposal}
           saveChatRecipe={saveChatRecipe}
-          canSave={!!recipe.firestoreId}
+          canSave={!!recipe.firestoreId && hasUnsavedChanges}
+          isSaving={isSavingChatRecipe}
           onClose={() => setChatOpen(false)}
           theme={theme}
           t={t}
@@ -653,6 +662,7 @@ interface ChatPanelProps {
   rejectProposal: (messageId: string) => void;
   saveChatRecipe: () => Promise<void>;
   canSave: boolean;
+  isSaving: boolean;
   onClose: () => void;
   theme: ThemePlugin;
   t: (dark: string, light: string) => string;
@@ -666,6 +676,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   rejectProposal,
   saveChatRecipe,
   canSave,
+  isSaving,
   onClose,
   theme,
   t,
@@ -751,9 +762,12 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           {canSave && (
             <button
               onClick={saveChatRecipe}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium ${theme.properties.radius} transition-colors ${t('bg-green-900/30 text-green-400 hover:bg-green-900/50 border border-green-800', 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200')}`}
+              disabled={isSaving}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium ${theme.properties.radius} transition-colors disabled:opacity-50 ${t('bg-green-900/30 text-green-400 hover:bg-green-900/50 border border-green-800', 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200')}`}
             >
-              <Save size={14} /> Sauvegarder les modifications
+              {isSaving
+                ? <><Loader2 size={14} className="animate-spin" /> Sauvegarde...</>
+                : <><Save size={14} /> Sauvegarder les modifications</>}
             </button>
           )}
           <div className="flex gap-2">

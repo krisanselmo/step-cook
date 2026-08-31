@@ -12,6 +12,9 @@ describe('ProcessingView', () => {
     typeof useCookingState
   >;
 
+  // defaultProps ne porte pas isDarkMode : son `t` renvoie toujours la classe claire.
+  const isDarkMode = false;
+
   const defaultProps = {
     theme: {
       id: 'default',
@@ -39,7 +42,7 @@ describe('ProcessingView', () => {
       },
     },
     t: jest.fn((darkClass: string, lightClass: string) =>
-      defaultProps.isDarkMode ? darkClass : lightClass,
+      isDarkMode ? darkClass : lightClass,
     ),
   };
 

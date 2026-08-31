@@ -1,18 +1,17 @@
 # Step Cook
 
-Application de cuisine interactive pour Thermomix, construite avec Next.js.
-Elle permet de suivre une recette étape par étape avec timer, température et vitesse.
+Application de cuisine interactive pour Thermomix (Next.js) : suivre une recette pas à pas
+avec timer, température et vitesse.
 
 ## Stack technique
 
 - **Framework** : Next.js 16 (App Router), React 19, TypeScript
-- **Style** : Tailwind CSS 4
-- **Icônes** : lucide-react
-- **IA** : Google Generative AI (Gemini) pour la génération/substitution de recettes
-- **Backend externe** : Mealie (gestionnaire de recettes auto-hébergé, derrière Cloudflare Access)
-- **Stockage** : Firebase Firestore (recettes générées par Gemini)
+- **Style** : Tailwind CSS 4, icônes lucide-react
 - **Tests** : Jest + Testing Library
-- **Dev server** : port 4000 (`next dev -p 4000`)
+- **Dev server** : port 4000
+- **Intégrations, toutes optionnelles** : Gemini (génération de recettes + agent
+  conversationnel), Mealie (instance auto-hébergée derrière Cloudflare Access),
+  Firestore (recettes sauvegardées). Sans configuration, seul le mode manuel fonctionne.
 
 ## Commandes
 
@@ -29,66 +28,35 @@ npm test          # Jest
 app/
 ├── api/
 │   ├── gemini/
-│   │   ├── prompt.ts          # Prompt système pour Gemini (format JSON attendu)
-│   │   ├── generate/route.ts  # POST - Génère une recette via Gemini
-│   │   └── chat/
-│   │       ├── prompt.ts      # Prompt système de l'agent (answer / propose)
-│   │       └── route.ts       # POST - Agent conversationnel sur la recette courante
+│   │   ├── prompt.ts          # Prompt système (format JSON attendu)
+│   │   ├── generate/route.ts  # POST - Génère une recette
+│   │   ├── config/route.ts    # GET  - Gemini est-il configuré ?
+│   │   └── chat/              # POST - Agent sur la recette courante : répond, ou
+│   │                          #        propose une version modifiée soumise à
+│   │                          #        validation humaine (jamais auto-appliquée)
 │   ├── mealie/
-│   │   ├── recipes/route.ts   # GET - Liste les recettes Mealie
-│   │   ├── detail/route.ts    # GET - Détail d'une recette Mealie
-│   │   └── upload/route.ts    # POST - Cook log + upload photo vers Mealie
-│   ├── firestore/
-│   │   └── recipes/
-│   │       ├── route.ts       # GET (lister) + POST (sauvegarder) recettes Firestore
-│   │       └── [id]/route.ts  # GET (détail) + DELETE (supprimer)
-│   └── substitute/            # POST - Suggestion de substitution d'ingrédient via Gemini
-├── components/ui/             # Composants UI réutilisables (Button, ThemeDropdown)
+│   │   ├── recipes/route.ts   # GET  - Liste
+│   │   ├── detail/route.ts    # GET  - Détail
+│   │   └── upload/route.ts    # POST - Cook log + photo
+│   ├── firestore/recipes/
+│   │   ├── route.ts           # GET (lister) + POST (sauvegarder)
+│   │   └── [id]/route.ts      # GET (détail) + PUT (modifier) + DELETE
+│   └── substitute/            # POST - Substitution d'ingrédient
+├── components/ui/             # Button, ThemeDropdown
 ├── hooks/
 │   └── useCookingState.ts     # Hook principal : état global de l'app
 ├── lib/
-│   ├── types.ts               # Interfaces (Recipe, Ingredient, StepParams, Mealie types, SavedRecipeSummary, ChatMessage, RecipeProposal, ThemePlugin)
-│   ├── utils.ts               # Parsing recettes (JSON/texte), extraction params Thermomix, Levenshtein
-│   ├── firebase.ts            # Singleton Firebase Admin SDK (getDb())
-│   └── themes.ts              # Thèmes visuels (couleurs, fonts, radius)
+│   ├── types.ts               # Recipe, Ingredient, StepParams, ChatMessage, ThemePlugin…
+│   ├── utils.ts               # parseRecipe(), extractStepParams() (temps, température,
+│   │                          # vitesse, sens inverse), Levenshtein
+│   ├── firebase.ts            # Firebase Admin SDK (getDb(), isFirebaseConfigured())
+│   └── themes.ts              # Thèmes visuels
 ├── views/
-│   ├── InputView.tsx           # Page d'accueil : liste Mealie, recettes sauvegardées, mode manuel, mode Gemini
-│   ├── ProcessingView.tsx      # Écran de chargement
-│   └── CookingView.tsx         # Vue cuisine : overview (KPIs, description, ingrédients, étapes) + step-by-step
-└── page.tsx                    # Point d'entrée, orchestre les vues
+│   ├── InputView.tsx          # Accueil : recettes Mealie + sauvegardées, manuel, Gemini
+│   ├── ProcessingView.tsx     # Écran de chargement
+│   └── CookingView.tsx        # Overview + pas-à-pas + chat
+└── page.tsx                   # Point d'entrée, orchestre les vues
 ```
-
-## Flux de données des recettes
-
-Les recettes arrivent par 4 chemins, tous convergent vers le type `Recipe` :
-
-1. **Gemini** : prompt utilisateur → API Gemini → JSON brut → `parseRecipe()` → `Recipe` → auto-save Firestore
-2. **Mealie** : slug → API detail → `formatMealieToText()` → `parseRecipe(text, slug, orgURL, metadata)` → `Recipe`
-3. **Manuel** : texte libre collé → `parseRecipe()` → `Recipe`
-4. **Firestore** : id → API detail → `Recipe` (déjà structuré, pas de parsing)
-
-`parseRecipe()` gère deux modes : JSON (prioritaire) et texte (fallback avec détection de sections).
-
-## Agent conversationnel (chat)
-
-Le chat (`/api/gemini/chat`) est un agent qui reçoit la recette courante, l'historique
-de conversation et le message de l'utilisateur, puis renvoie l'une de deux actions :
-
-- `answer` : une réponse directe (question, conseil, clarification), la recette n'est pas touchée ;
-- `propose` : une **proposition** de recette modifiée, accompagnée de la liste des `changes`.
-
-Une proposition n'est jamais appliquée automatiquement (HITL). Elle est stockée dans le
-message assistant (`ChatMessage.proposal`) avec un statut :
-`pending` → `applied` (l'utilisateur clique « Appliquer ») ou `rejected` (« Ignorer »).
-Appliquer une proposition marque les autres propositions encore en attente comme `stale` :
-elles ont été calculées sur l'ancienne recette et l'écraseraient.
-
-Côté hook : `sendChatMessage()`, `applyProposal(messageId)`, `rejectProposal(messageId)`.
-
-## Parsing Thermomix
-
-`extractStepParams()` extrait de chaque étape : temps, température, vitesse, sens inverse.
-`corrigerInstructionsThermomix()` normalise la notation `//` (sens inverse) en emojis lisibles.
 
 ## Variables d'environnement (.env.local)
 
@@ -96,12 +64,14 @@ Côté hook : `sendChatMessage()`, `applyProposal(messageId)`, `rejectProposal(m
 - `MEALIE_API_TOKEN` : Token API Mealie (long-lived)
 - `MEALIE_CF_COOKIE` : Cookie Cloudflare Access (`CF_AppSession` + `CF_Authorization`) — expire régulièrement
 - `GEMINI_API_KEY` : Clé API Google Generative AI
-- `FIREBASE_SERVICE_ACCOUNT_PATH` : Chemin vers le fichier service account JSON (ex: `./private/firebase-service-account.json`)
-- `FIREBASE_SERVICE_ACCOUNT_JSON` : Alternative au path — JSON stringifié du service account (pour déploiement)
+- `FIREBASE_SERVICE_ACCOUNT_PATH` : Chemin vers le service account JSON
+- `FIREBASE_SERVICE_ACCOUNT_JSON` : Alternative au path, pour le déploiement
 
 ## Conventions
 
 - Langue de l'UI : **français**
-- Les recettes sont orientées Thermomix (temps, température, vitesse, sens inverse)
-- Le système de thèmes est pluggable (interface `ThemePlugin`)
-- Dark/light mode supporté via la fonction helper `t(darkClass, lightClass)`
+- Recettes orientées Thermomix (temps, température, vitesse, sens inverse)
+- Toutes les sources convergent vers le type `Recipe` via `parseRecipe()` (JSON prioritaire,
+  texte en fallback) ; les recettes Firestore sont déjà structurées
+- Thèmes pluggables (`ThemePlugin`), dark/light via le helper `t(darkClass, lightClass)`
+- Une intégration non configurée est masquée de l'UI ; en panne, elle affiche un bandeau

@@ -15,6 +15,8 @@ import {
   Sparkles,
   Pencil,
   Trash2,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import {Button} from '@/app/components/ui/Button';
 import {ThemeDropdown} from '@/app/components/ui/ThemeDropdown';
@@ -156,6 +158,9 @@ interface InputViewProps {
   mealieRecipes: ReturnType<typeof useCookingState>['mealieRecipes'];
   isMealieLoading: ReturnType<typeof useCookingState>['isMealieLoading'];
   mealieError: ReturnType<typeof useCookingState>['mealieError'];
+  isMealieConfigured: ReturnType<typeof useCookingState>['isMealieConfigured'];
+  isFirestoreConfigured: ReturnType<typeof useCookingState>['isFirestoreConfigured'];
+  isGeminiConfigured: ReturnType<typeof useCookingState>['isGeminiConfigured'];
   searchTerm: ReturnType<typeof useCookingState>['searchTerm'];
   setSearchTerm: ReturnType<typeof useCookingState>['setSearchTerm'];
   sortOption: ReturnType<typeof useCookingState>['sortOption'];
@@ -176,6 +181,13 @@ interface InputViewProps {
   deleteSavedRecipe: (id: string) => Promise<void>;
 }
 
+// Classes littérales : Tailwind ne détecte pas les noms construits à l'exécution.
+const GRID_COLS: Record<number, string> = {
+  1: 'md:grid-cols-1',
+  2: 'md:grid-cols-2',
+  3: 'md:grid-cols-3',
+};
+
 export const InputView: React.FC<InputViewProps> = ({
   rawText,
   setRawText,
@@ -183,6 +195,9 @@ export const InputView: React.FC<InputViewProps> = ({
   mealieRecipes,
   isMealieLoading,
   mealieError,
+  isMealieConfigured,
+  isFirestoreConfigured,
+  isGeminiConfigured,
   searchTerm,
   setSearchTerm,
   sortOption,
@@ -203,13 +218,30 @@ export const InputView: React.FC<InputViewProps> = ({
   deleteSavedRecipe,
 }) => {
   const ThemeIcon = theme.icon;
-  const [activeTab, setActiveTab] = useState<'recipes' | 'manual' | 'ai'>('recipes');
+  const [activeTab, setActiveTab] = useState<'recipes' | 'manual' | 'ai'>(
+    isMealieConfigured || isFirestoreConfigured ? 'recipes' : 'manual',
+  );
   const [geminiText, setGeminiText] = useState<string>('');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'mealie' | 'saved'>('all');
   const [deleteTarget, setDeleteTarget] = useState<RecipeItem | null>(null);
 
   const isLoading = isMealieLoading || isSavedLoading;
-  const error = mealieError || savedError;
+
+  // Une source en panne ne doit pas masquer l'autre : on liste les erreurs pour
+  // les afficher en bandeau, au-dessus des recettes qui ont bien été chargées.
+  const sourceErrors = useMemo(
+    () => [
+      { key: 'mealie' as const, label: 'Mealie', message: isMealieConfigured ? mealieError : null },
+      { key: 'saved' as const, label: 'Recettes IA', message: isFirestoreConfigured ? savedError : null },
+    ].filter((e): e is typeof e & { message: string } => !!e.message),
+    [mealieError, savedError, isMealieConfigured, isFirestoreConfigured],
+  );
+
+  // Filtrer par source n'a de sens que si les deux sources existent.
+  const showSourceFilters = isMealieConfigured && isFirestoreConfigured;
+  const showRecipesColumn = isMealieConfigured || isFirestoreConfigured;
+  // Le mode manuel est la seule colonne toujours disponible.
+  const columnCount = 1 + (showRecipesColumn ? 1 : 0) + (isGeminiConfigured ? 1 : 0);
 
   const allRecipes = useMemo(
     () => toRecipeItems(mealieRecipes, savedRecipes),
@@ -278,138 +310,166 @@ export const InputView: React.FC<InputViewProps> = ({
         {/* Toggle buttons for mobile */}
         <div className="flex w-full md:hidden mb-4 justify-center">
           <div className={`inline-flex ${theme.properties.radius} overflow-hidden border ${t('border-gray-700', 'border-gray-200')}`}>
-            <button
-              onClick={() => setActiveTab('recipes')}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'recipes' ? `${theme.colors.bgPrimary} text-white` : t('bg-gray-800 text-gray-300', 'bg-white text-gray-700 hover:bg-gray-50')}`}
-            >
-              Recettes
-            </button>
+            {showRecipesColumn && (
+              <button
+                onClick={() => setActiveTab('recipes')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'recipes' ? `${theme.colors.bgPrimary} text-white` : t('bg-gray-800 text-gray-300', 'bg-white text-gray-700 hover:bg-gray-50')}`}
+              >
+                Recettes
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('manual')}
               className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'manual' ? `${theme.colors.bgPrimary} text-white` : t('bg-gray-800 text-gray-300', 'bg-white text-gray-700 hover:bg-gray-50')}`}
             >
               <Pencil size={16}/>
             </button>
-            <button
-              onClick={() => setActiveTab('ai')}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'ai' ? `${theme.colors.bgPrimary} text-white` : t('bg-gray-800 text-gray-300', 'bg-white text-gray-700 hover:bg-gray-50')}`}
-            >
-              <Sparkles size={16}/>
-            </button>
+            {isGeminiConfigured && (
+              <button
+                onClick={() => setActiveTab('ai')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'ai' ? `${theme.colors.bgPrimary} text-white` : t('bg-gray-800 text-gray-300', 'bg-white text-gray-700 hover:bg-gray-50')}`}
+              >
+                <Sparkles size={16}/>
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 flex-1 overflow-hidden">
+        <div className={`grid ${GRID_COLS[columnCount]} gap-6 flex-1 overflow-hidden`}>
           {/* Colonne: Recettes (Mealie + Sauvegardées) */}
-          <div
-            className={`${activeTab === 'recipes' ? 'flex' : 'hidden'} md:flex flex-col ${theme.properties.radius} border shadow-xl overflow-hidden transition-colors ${t(theme.colors.cardBgDark, theme.colors.cardBgLight)}`}
-          >
-            <div className={`p-4 border-b flex flex-col gap-3 ${t('border-gray-800/50', 'border-gray-100')}`}>
-              <div className="flex items-center justify-between">
-                <h2 className="font-bold">
-                  Recettes ({displayedRecipes.length})
-                </h2>
-                <button
-                  onClick={handleRefresh}
-                  className={`text-xs ${theme.colors.accent} hover:underline`}
-                >
-                  Actualiser
-                </button>
-              </div>
-
-              <div className="flex gap-2">
-                <div
-                  className={`flex-1 flex items-center px-3 py-2 ${theme.properties.radius} border ${t('bg-black/50 border-gray-700/50', 'bg-gray-50 border-gray-300')}`}
-                >
-                  <Search size={14} className="opacity-50 mr-2"/>
-                  <input
-                    type="text"
-                    placeholder="Rechercher..."
-                    className="bg-transparent outline-none w-full text-sm"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                  />
-                  {searchTerm && (
-                    <button onClick={() => setSearchTerm('')}>
-                      <X size={14} className="opacity-50"/>
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex gap-1">
+          {showRecipesColumn && (
+            <div
+              className={`${activeTab === 'recipes' ? 'flex' : 'hidden'} md:flex flex-col ${theme.properties.radius} border shadow-xl overflow-hidden transition-colors ${t(theme.colors.cardBgDark, theme.colors.cardBgLight)}`}
+            >
+              <div className={`p-4 border-b flex flex-col gap-3 ${t('border-gray-800/50', 'border-gray-100')}`}>
+                <div className="flex items-center justify-between">
+                  <h2 className="font-bold">
+                    Recettes ({displayedRecipes.length})
+                  </h2>
                   <button
-                    onClick={() => setSortOption(
-                      sortOption === 'date-desc' ? 'date-asc' : 'date-desc'
-                    )}
-                    className={`p-2 ${theme.properties.radius} border transition-colors ${sortOption.startsWith('date') ? `${theme.colors.bgPrimary} ${theme.colors.borderAccent} text-white` : t('border-gray-700/50 hover:bg-gray-800/50', 'border-gray-300 hover:bg-gray-100')}`}
-                    title={sortOption === 'date-desc' ? 'Plus anciennes d\'abord' : 'Plus récentes d\'abord'}
+                    onClick={handleRefresh}
+                    className={`text-xs ${theme.colors.accent} hover:underline`}
                   >
-                    {sortOption === 'date-asc' ? <CalendarArrowUp size={16}/> : <Calendar size={16}/>}
-                  </button>
-                  <button
-                    onClick={() => setSortOption(
-                      sortOption === 'alpha-asc' ? 'alpha-desc' : 'alpha-asc'
-                    )}
-                    className={`p-2 ${theme.properties.radius} border transition-colors ${sortOption.startsWith('alpha') ? `${theme.colors.bgPrimary} ${theme.colors.borderAccent} text-white` : t('border-gray-700/50 hover:bg-gray-800/50', 'border-gray-300 hover:bg-gray-100')}`}
-                    title={sortOption === 'alpha-asc' ? 'Trier Z-A' : 'Trier A-Z'}
-                  >
-                    {sortOption === 'alpha-desc' ? <ArrowUpAZ size={16}/> : <ArrowDownAZ size={16}/>}
+                    Actualiser
                   </button>
                 </div>
-              </div>
 
-              {/* Source filter */}
-              <div className="flex gap-1.5">
-                {([
-                  { key: 'all', label: 'Tout' },
-                  { key: 'mealie', label: 'Mealie' },
-                  { key: 'saved', label: 'IA' },
-                ] as const).map(f => (
-                  <button
-                    key={f.key}
-                    onClick={() => setSourceFilter(f.key)}
-                    className={`px-3 py-1 text-xs font-medium ${theme.properties.radius} border transition-colors ${
-                      sourceFilter === f.key
-                        ? `${theme.colors.bgPrimary} ${theme.colors.borderAccent} text-white`
-                        : t('border-gray-700/50 hover:bg-gray-800/50 text-gray-400', 'border-gray-300 hover:bg-gray-100 text-gray-500')
-                    }`}
+                <div className="flex gap-2">
+                  <div
+                    className={`flex-1 flex items-center px-3 py-2 ${theme.properties.radius} border ${t('bg-black/50 border-gray-700/50', 'bg-gray-50 border-gray-300')}`}
                   >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-2">
-                  <Loader2 className="animate-spin"/>
-                  <span className="text-xs">Chargement...</span>
-                </div>
-              ) : error ? (
-                <div className="text-red-400 text-sm text-center p-4">
-                  {error}
-                </div>
-              ) : displayedRecipes.length === 0 ? (
-                <div className="text-center p-8 text-gray-500 text-sm">
-                  Aucune recette trouvée.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {displayedRecipes.map(item => (
-                    <RecipeCard
-                      key={item.id}
-                      item={item}
-                      onLoad={() => handleRecipeLoad(item)}
-                      onDelete={item.source === 'saved' ? () => handleRecipeDelete(item) : undefined}
-                      theme={theme}
-                      t={t}
+                    <Search size={14} className="opacity-50 mr-2"/>
+                    <input
+                      type="text"
+                      placeholder="Rechercher..."
+                      className="bg-transparent outline-none w-full text-sm"
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
                     />
-                  ))}
+                    {searchTerm && (
+                      <button onClick={() => setSearchTerm('')}>
+                        <X size={14} className="opacity-50"/>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setSortOption(
+                        sortOption === 'date-desc' ? 'date-asc' : 'date-desc'
+                      )}
+                      className={`p-2 ${theme.properties.radius} border transition-colors ${sortOption.startsWith('date') ? `${theme.colors.bgPrimary} ${theme.colors.borderAccent} text-white` : t('border-gray-700/50 hover:bg-gray-800/50', 'border-gray-300 hover:bg-gray-100')}`}
+                      title={sortOption === 'date-desc' ? 'Plus anciennes d\'abord' : 'Plus récentes d\'abord'}
+                    >
+                      {sortOption === 'date-asc' ? <CalendarArrowUp size={16}/> : <Calendar size={16}/>}
+                    </button>
+                    <button
+                      onClick={() => setSortOption(
+                        sortOption === 'alpha-asc' ? 'alpha-desc' : 'alpha-asc'
+                      )}
+                      className={`p-2 ${theme.properties.radius} border transition-colors ${sortOption.startsWith('alpha') ? `${theme.colors.bgPrimary} ${theme.colors.borderAccent} text-white` : t('border-gray-700/50 hover:bg-gray-800/50', 'border-gray-300 hover:bg-gray-100')}`}
+                      title={sortOption === 'alpha-asc' ? 'Trier Z-A' : 'Trier A-Z'}
+                    >
+                      {sortOption === 'alpha-desc' ? <ArrowUpAZ size={16}/> : <ArrowDownAZ size={16}/>}
+                    </button>
+                  </div>
                 </div>
-              )}
+
+                {/* Source filter */}
+                {showSourceFilters && (
+                  <div className="flex gap-1.5">
+                    {([
+                      { key: 'all', label: 'Tout' },
+                      { key: 'mealie', label: 'Mealie' },
+                      { key: 'saved', label: 'IA' },
+                    ] as const).map(f => (
+                      <button
+                        key={f.key}
+                        onClick={() => setSourceFilter(f.key)}
+                        className={`px-3 py-1 text-xs font-medium ${theme.properties.radius} border transition-colors ${
+                          sourceFilter === f.key
+                            ? `${theme.colors.bgPrimary} ${theme.colors.borderAccent} text-white`
+                            : t('border-gray-700/50 hover:bg-gray-800/50 text-gray-400', 'border-gray-300 hover:bg-gray-100 text-gray-500')
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-2">
+                    <Loader2 className="animate-spin"/>
+                    <span className="text-xs">Chargement...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {sourceErrors.map(err => (
+                      <div
+                        key={err.key}
+                        role="status"
+                        className={`flex items-start gap-2 p-2.5 text-xs ${theme.properties.radius} border ${t('bg-amber-950/40 border-amber-900/60 text-amber-200', 'bg-amber-50 border-amber-200 text-amber-800')}`}
+                      >
+                        <AlertTriangle size={14} className="shrink-0 mt-0.5"/>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium">{err.label} indisponible</p>
+                          <p className="opacity-80">{err.message}</p>
+                        </div>
+                        <button
+                          onClick={handleRefresh}
+                          title="Réessayer"
+                          aria-label={`Réessayer ${err.label}`}
+                          className={`shrink-0 p-1 ${theme.properties.radius} transition-colors ${t('hover:bg-amber-900/50', 'hover:bg-amber-100')}`}
+                        >
+                          <RefreshCw size={14}/>
+                        </button>
+                      </div>
+                    ))}
+
+                    {displayedRecipes.length === 0 ? (
+                      <div className="text-center p-8 text-gray-500 text-sm">
+                        Aucune recette trouvée.
+                      </div>
+                    ) : (
+                      displayedRecipes.map(item => (
+                        <RecipeCard
+                          key={item.id}
+                          item={item}
+                          onLoad={() => handleRecipeLoad(item)}
+                          onDelete={item.source === 'saved' ? () => handleRecipeDelete(item) : undefined}
+                          theme={theme}
+                          t={t}
+                        />
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Colonne: Mode Manuel */}
           <div
@@ -435,27 +495,29 @@ export const InputView: React.FC<InputViewProps> = ({
           </div>
 
           {/* Colonne: Assistant IA */}
-          <div
-            className={`${activeTab === 'ai' ? 'flex' : 'hidden'} md:flex flex-col p-4 ${theme.properties.radius} border shadow-xl transition-colors ${t(theme.colors.cardBgDark, theme.colors.cardBgLight)}`}
-          >
-            <h2 className="font-bold mb-2 text-sm uppercase tracking-wider text-gray-500">
-              Assistant IA
-            </h2>
-            <textarea
-              className={`flex-1 w-full p-4 ${theme.properties.radius} border outline-none resize-none font-mono text-xs leading-relaxed transition-colors mb-4 focus:${theme.colors.borderAccent} ${t('bg-black/50 text-white border-gray-800/50', 'bg-gray-50 text-gray-900 border-gray-200')}`}
-              placeholder="Décrivez votre recette de rêve (ex: 'Recette végétarienne rapide, avec des lentilles et beaucoup de légumes')..."
-              value={geminiText}
-              onChange={e => setGeminiText(e.target.value)}
-            />
-            <Button
-              onClick={() => handleGeminiGenerate(geminiText)}
-              className="w-full"
-              disabled={!geminiText.trim()}
-              theme={theme}
+          {isGeminiConfigured && (
+            <div
+              className={`${activeTab === 'ai' ? 'flex' : 'hidden'} md:flex flex-col p-4 ${theme.properties.radius} border shadow-xl transition-colors ${t(theme.colors.cardBgDark, theme.colors.cardBgLight)}`}
             >
-              Générer Recette <Sparkles size={18}/>
-            </Button>
-          </div>
+              <h2 className="font-bold mb-2 text-sm uppercase tracking-wider text-gray-500">
+                Assistant IA
+              </h2>
+              <textarea
+                className={`flex-1 w-full p-4 ${theme.properties.radius} border outline-none resize-none font-mono text-xs leading-relaxed transition-colors mb-4 focus:${theme.colors.borderAccent} ${t('bg-black/50 text-white border-gray-800/50', 'bg-gray-50 text-gray-900 border-gray-200')}`}
+                placeholder="Décrivez votre recette de rêve (ex: 'Recette végétarienne rapide, avec des lentilles et beaucoup de légumes')..."
+                value={geminiText}
+                onChange={e => setGeminiText(e.target.value)}
+              />
+              <Button
+                onClick={() => handleGeminiGenerate(geminiText)}
+                className="w-full"
+                disabled={!geminiText.trim()}
+                theme={theme}
+              >
+                Générer Recette <Sparkles size={18}/>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

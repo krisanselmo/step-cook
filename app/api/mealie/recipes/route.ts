@@ -5,11 +5,10 @@ export async function GET() {
   const token = process.env.MEALIE_API_TOKEN;
   const cfCookie = process.env.MEALIE_CF_COOKIE; // Récupération du cookie
 
+  // Intégration optionnelle : non configurée n'est pas une panne. On le dit
+  // explicitement pour que l'UI masque Mealie au lieu d'afficher une erreur.
   if (!baseUrl) {
-    return NextResponse.json(
-      { error: 'MEALIE_BASE_URL non définie' },
-      { status: 500 },
-    );
+    return NextResponse.json({ configured: false });
   }
 
   const headers: HeadersInit = {

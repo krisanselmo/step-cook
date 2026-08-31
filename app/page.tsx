@@ -27,6 +27,9 @@ export default function Home() {
     mealieRecipes,
     isMealieLoading,
     mealieError,
+    isMealieConfigured,
+    isFirestoreConfigured,
+    isGeminiConfigured,
     searchTerm,
     setSearchTerm,
     sortOption,
@@ -39,6 +42,8 @@ export default function Home() {
     applyProposal,
     rejectProposal,
     saveChatRecipe,
+    hasUnsavedChanges,
+    isSavingChatRecipe,
     cookedModalOpen,
     setCookedModalOpen,
     selectedImage,
@@ -82,6 +87,9 @@ export default function Home() {
           mealieRecipes={mealieRecipes}
           isMealieLoading={isMealieLoading}
           mealieError={mealieError}
+          isMealieConfigured={isMealieConfigured}
+          isFirestoreConfigured={isFirestoreConfigured}
+          isGeminiConfigured={isGeminiConfigured}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           sortOption={sortOption}
@@ -129,6 +137,9 @@ export default function Home() {
           applyProposal={applyProposal}
           rejectProposal={rejectProposal}
           saveChatRecipe={saveChatRecipe}
+          hasUnsavedChanges={hasUnsavedChanges}
+          isSavingChatRecipe={isSavingChatRecipe}
+          isGeminiConfigured={isGeminiConfigured}
           cookedModalOpen={cookedModalOpen}
           setCookedModalOpen={setCookedModalOpen}
           selectedImage={selectedImage}

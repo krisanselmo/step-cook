@@ -51,6 +51,7 @@ interface UseCookingState {
   mealieRecipes: MealieRecipeSummary[];
   isMealieLoading: boolean;
   mealieError: string | null;
+  isMealieConfigured: boolean;
   searchTerm: string;
   setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
   sortOption: SortOption;
@@ -63,6 +64,8 @@ interface UseCookingState {
   applyProposal: (messageId: string) => void;
   rejectProposal: (messageId: string) => void;
   saveChatRecipe: () => Promise<void>;
+  hasUnsavedChanges: boolean;
+  isSavingChatRecipe: boolean;
   cookedModalOpen: boolean;
   setCookedModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   selectedImage: File | null;
@@ -92,6 +95,8 @@ interface UseCookingState {
   savedRecipes: SavedRecipeSummary[];
   isSavedLoading: boolean;
   savedError: string | null;
+  isFirestoreConfigured: boolean;
+  isGeminiConfigured: boolean;
   fetchSavedRecipes: () => Promise<void>;
   loadSavedRecipe: (id: string) => Promise<void>;
   deleteSavedRecipe: (id: string) => Promise<void>;
@@ -161,6 +166,10 @@ export const useCookingState = (): UseCookingState => {
   const [mealieRecipes, setMealieRecipes] = useState<MealieRecipeSummary[]>([]);
   const [isMealieLoading, setIsMealieLoading] = useState<boolean>(false);
   const [mealieError, setMealieError] = useState<string | null>(null);
+  // Mealie non configuré (pas de MEALIE_BASE_URL) : on le masque au lieu de l'annoncer en panne.
+  const [isMealieConfigured, setIsMealieConfigured] = useState<boolean>(true);
+  const [isFirestoreConfigured, setIsFirestoreConfigured] = useState<boolean>(true);
+  const [isGeminiConfigured, setIsGeminiConfigured] = useState<boolean>(true);
 
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipeSummary[]>([]);
   const [isSavedLoading, setIsSavedLoading] = useState<boolean>(false);
@@ -173,6 +182,9 @@ export const useCookingState = (): UseCookingState => {
   const [chatOpen, setChatOpen] = useState<boolean>(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
+  // Propositions appliquées mais pas encore persistées dans Firestore.
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [isSavingChatRecipe, setIsSavingChatRecipe] = useState<boolean>(false);
 
   // Cooked Modal State
   const [cookedModalOpen, setCookedModalOpen] = useState<boolean>(false);
@@ -217,15 +229,46 @@ export const useCookingState = (): UseCookingState => {
       const res = await fetch('/api/mealie/recipes');
 
       if (!res.ok) {
-        throw new Error('Erreur chargement');
+        const details = await res.json().catch(() => null);
+
+        throw new Error(details?.details || details?.error || `HTTP ${res.status}`);
       }
       const data = await res.json();
+
+      // Le proxy répond { configured: false } quand l'intégration n'est pas
+      // renseignée ; la liste des recettes, elle, est un tableau.
+      if (!Array.isArray(data) && data?.configured === false) {
+        setIsMealieConfigured(false);
+        setMealieRecipes([]);
+
+        return;
+      }
+
+      setIsMealieConfigured(true);
       setMealieRecipes(data);
     } catch (err) {
+      // Panne d'une intégration externe, déjà rendue à l'écran : ce n'est pas un
+      // bug de l'app, donc pas de console.error (que l'overlay dev remonte en Issue).
       setMealieError('Impossible de charger les recettes Mealie.');
-      console.error(err);
+      console.warn('[Mealie] liste indisponible :', err);
     } finally {
       setIsMealieLoading(false);
+    }
+  }, []);
+
+  // Gemini n'a pas de liste à charger : on interroge sa configuration au montage.
+  const fetchGeminiConfig = useCallback(async () => {
+    try {
+      const res = await fetch('/api/gemini/config');
+
+      if (!res.ok) {
+        throw new Error('Erreur configuration');
+      }
+      const data = await res.json();
+      setIsGeminiConfigured(data?.configured !== false);
+    } catch (err) {
+      // Injoignable : on laisse l'IA visible plutôt que de la masquer à tort.
+      console.warn('[Gemini] configuration injoignable :', err);
     }
   }, []);
 
@@ -237,13 +280,24 @@ export const useCookingState = (): UseCookingState => {
       const res = await fetch('/api/firestore/recipes');
 
       if (!res.ok) {
-        throw new Error('Erreur chargement');
+        const details = await res.json().catch(() => null);
+
+        throw new Error(details?.error || `HTTP ${res.status}`);
       }
       const data = await res.json();
+
+      if (!Array.isArray(data) && data?.configured === false) {
+        setIsFirestoreConfigured(false);
+        setSavedRecipes([]);
+
+        return;
+      }
+
+      setIsFirestoreConfigured(true);
       setSavedRecipes(data);
     } catch (err) {
       setSavedError('Impossible de charger les recettes sauvegardées.');
-      console.error(err);
+      console.warn('[Firestore] liste indisponible :', err);
     } finally {
       setIsSavedLoading(false);
     }
@@ -261,9 +315,10 @@ export const useCookingState = (): UseCookingState => {
     const interval = setInterval(updateClock, 60000);
     fetchMealieRecipes();
     fetchSavedRecipes();
+    fetchGeminiConfig();
 
     return () => clearInterval(interval);
-  }, [fetchMealieRecipes, fetchSavedRecipes]);
+  }, [fetchMealieRecipes, fetchSavedRecipes, fetchGeminiConfig]);
 
   const loadSavedRecipe = async (id: string) => {
     setView('processing');
@@ -290,6 +345,7 @@ export const useCookingState = (): UseCookingState => {
       setRecipe(loadedRecipe);
       setCheckedIngredients(new Set());
       setChatMessages([]);
+      setHasUnsavedChanges(false);
       setCurrentStep(-1);
       setView('cooking');
     } catch (err) {
@@ -347,6 +403,7 @@ export const useCookingState = (): UseCookingState => {
         setRecipe(parseRecipe(formattedText, slug, detail.orgURL, metadata));
         setCheckedIngredients(new Set());
         setChatMessages([]);
+        setHasUnsavedChanges(false);
         setCurrentStep(-1);
         setView('cooking');
       }, 500);
@@ -432,6 +489,7 @@ export const useCookingState = (): UseCookingState => {
       setRecipe(parseRecipe(rawText));
       setCheckedIngredients(new Set());
       setChatMessages([]);
+      setHasUnsavedChanges(false);
       setCurrentStep(-1);
       setView('cooking');
     }, 800);
@@ -527,6 +585,7 @@ export const useCookingState = (): UseCookingState => {
 
     setRecipe(target.proposal.recipe);
     setCheckedIngredients(new Set());
+    setHasUnsavedChanges(true);
     setChatMessages(prev =>
       prev.map(msg => {
         if (!msg.proposal || msg.proposal.status !== 'pending') {return msg;}
@@ -556,7 +615,9 @@ export const useCookingState = (): UseCookingState => {
   };
 
   const saveChatRecipe = async () => {
-    if (!recipe?.firestoreId) {return;}
+    if (!recipe?.firestoreId || !hasUnsavedChanges || isSavingChatRecipe) {return;}
+
+    setIsSavingChatRecipe(true);
 
     try {
       const res = await fetch(`/api/firestore/recipes/${recipe.firestoreId}`, {
@@ -569,6 +630,17 @@ export const useCookingState = (): UseCookingState => {
         throw new Error('Erreur sauvegarde');
       }
 
+      setHasUnsavedChanges(false);
+
+      // La liste d'accueil vit dans le state : sans ça elle garderait l'ancien
+      // titre jusqu'au prochain rechargement complet de la page.
+      setSavedRecipes(prev =>
+        prev.map(saved =>
+          saved.id === recipe.firestoreId
+            ? { ...saved, title: recipe.title, description: recipe.description }
+            : saved,
+        ),
+      );
       setChatMessages(prev => [
         ...prev,
         { id: createMessageId(), role: 'assistant', content: 'Recette sauvegardée.' },
@@ -579,6 +651,8 @@ export const useCookingState = (): UseCookingState => {
         'Erreur lors de la sauvegarde : ' +
           (err instanceof Error ? err.message : String(err)),
       );
+    } finally {
+      setIsSavingChatRecipe(false);
     }
   };
 
@@ -604,6 +678,7 @@ export const useCookingState = (): UseCookingState => {
       setRecipe(parsedRecipe);
       setCheckedIngredients(new Set());
       setChatMessages([]);
+      setHasUnsavedChanges(false);
       setCurrentStep(-1);
       setView('cooking');
 
@@ -731,6 +806,7 @@ export const useCookingState = (): UseCookingState => {
     mealieRecipes,
     isMealieLoading,
     mealieError,
+    isMealieConfigured,
     searchTerm,
     setSearchTerm,
     sortOption,
@@ -743,6 +819,8 @@ export const useCookingState = (): UseCookingState => {
     applyProposal,
     rejectProposal,
     saveChatRecipe,
+    hasUnsavedChanges,
+    isSavingChatRecipe,
     cookedModalOpen,
     setCookedModalOpen,
     selectedImage,
@@ -772,6 +850,8 @@ export const useCookingState = (): UseCookingState => {
     savedRecipes,
     isSavedLoading,
     savedError,
+    isFirestoreConfigured,
+    isGeminiConfigured,
     fetchSavedRecipes,
     loadSavedRecipe,
     deleteSavedRecipe,

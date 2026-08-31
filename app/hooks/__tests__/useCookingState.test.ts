@@ -65,6 +65,94 @@ describe('useCookingState', () => {
     );
   });
 
+  describe('intégrations optionnelles', () => {
+    it('marque Firestore comme non configuré sans lever d\'erreur', async () => {
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
+        url === '/api/firestore/recipes'
+          ? { ok: true, json: async () => ({ configured: false }) }
+          : { ok: true, json: async () => [] },
+      );
+
+      const { result } = await renderCookingHook();
+
+      expect(result.current.isFirestoreConfigured).toBe(false);
+      expect(result.current.savedError).toBeNull();
+      expect(result.current.savedRecipes).toEqual([]);
+    });
+
+    it('signale une vraie panne Firestore comme une erreur', async () => {
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
+        url === '/api/firestore/recipes'
+          ? { ok: false, json: async () => ({ error: 'boom' }) }
+          : { ok: true, json: async () => [] },
+      );
+
+      const { result } = await renderCookingHook();
+
+      expect(result.current.isFirestoreConfigured).toBe(true);
+      expect(result.current.savedError).toBe(
+        'Impossible de charger les recettes sauvegardées.',
+      );
+    });
+
+    it('marque Gemini comme non configuré quand la clé est absente', async () => {
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
+        url === '/api/gemini/config'
+          ? { ok: true, json: async () => ({ configured: false }) }
+          : { ok: true, json: async () => [] },
+      );
+
+      const { result } = await renderCookingHook();
+
+      expect(result.current.isGeminiConfigured).toBe(false);
+    });
+
+    it('laisse l\'IA visible si la config Gemini est injoignable', async () => {
+      // Masquer l'IA sur une erreur réseau serait pire que la laisser échouer
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
+        url === '/api/gemini/config'
+          ? { ok: false, json: async () => ({}) }
+          : { ok: true, json: async () => [] },
+      );
+
+      const { result } = await renderCookingHook();
+
+      expect(result.current.isGeminiConfigured).toBe(true);
+    });
+  });
+
+  describe('intégration Mealie optionnelle', () => {
+    it('marque Mealie comme non configuré sans lever d\'erreur', async () => {
+      // Le proxy répond ainsi quand MEALIE_BASE_URL est absente du .env
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
+        url === '/api/mealie/recipes'
+          ? { ok: true, json: async () => ({ configured: false }) }
+          : { ok: true, json: async () => [] },
+      );
+
+      const { result } = await renderCookingHook();
+
+      expect(result.current.isMealieConfigured).toBe(false);
+      expect(result.current.mealieError).toBeNull();
+      expect(result.current.mealieRecipes).toEqual([]);
+    });
+
+    it('signale une vraie panne Mealie comme une erreur', async () => {
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
+        url === '/api/mealie/recipes'
+          ? { ok: false, json: async () => ({ error: 'boom' }) }
+          : { ok: true, json: async () => [] },
+      );
+
+      const { result } = await renderCookingHook();
+
+      expect(result.current.isMealieConfigured).toBe(true);
+      expect(result.current.mealieError).toBe(
+        'Impossible de charger les recettes Mealie.',
+      );
+    });
+  });
+
   describe('agent conversationnel (chat)', () => {
     const CHAT_RECIPE: Recipe = {
       title: 'Soupe',
@@ -259,6 +347,115 @@ describe('useCookingState', () => {
         result.current.applyProposal(result.current.chatMessages[3].id);
       });
       expect(result.current.recipe?.title).toBe('V1');
+    });
+
+    it('ne sauvegarde que s\'il y a des modifications appliquées', async () => {
+      const { result } = await renderWithRecipe();
+
+      act(() => {
+        result.current.setRecipe({ ...CHAT_RECIPE, firestoreId: 'rec-1' });
+      });
+
+      // Rien n'a été appliqué : le bouton est masqué et l'appel est sans effet
+      expect(result.current.hasUnsavedChanges).toBe(false);
+      await act(async () => {
+        await result.current.saveChatRecipe();
+      });
+      expect(global.fetch).not.toHaveBeenCalledWith(
+        '/api/firestore/recipes/rec-1',
+        expect.anything(),
+      );
+
+      mockAgentResponse({
+        action: 'propose',
+        reply: 'Proposition',
+        recipe: { title: 'V2', ingredients: ['x'], steps: ['y'] },
+        changes: [],
+      });
+      await act(async () => {
+        await result.current.sendChatMessage('Change');
+      });
+
+      act(() => {
+        result.current.applyProposal(result.current.chatMessages[1].id);
+      });
+      expect(result.current.hasUnsavedChanges).toBe(true);
+
+      mockAgentResponse({ ok: true });
+      await act(async () => {
+        await result.current.saveChatRecipe();
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/firestore/recipes/rec-1',
+        expect.objectContaining({ method: 'PUT' }),
+      );
+      // Une fois persistée, la recette n'est plus « sale » : plus de re-sauvegarde
+      expect(result.current.hasUnsavedChanges).toBe(false);
+
+      const callsAfterSave = (global.fetch as jest.Mock).mock.calls.length;
+      await act(async () => {
+        await result.current.saveChatRecipe();
+      });
+      expect((global.fetch as jest.Mock).mock.calls.length).toBe(callsAfterSave);
+    });
+
+    it('met à jour le titre dans la liste d\'accueil après sauvegarde', async () => {
+      // La liste d'accueil est chargée au montage, puis on modifie la recette
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
+        url === '/api/firestore/recipes'
+          ? {
+            ok: true,
+            json: async () => [
+              {
+                id: 'rec-1',
+                title: 'Soupe',
+                description: 'Ancienne description',
+                createdAt: '2026-08-31T15:07:43.853Z',
+              },
+            ],
+          }
+          : { ok: true, json: async () => [] },
+      );
+
+      const { result } = await renderCookingHook();
+
+      expect(result.current.savedRecipes[0].title).toBe('Soupe');
+
+      act(() => {
+        result.current.setRecipe({ ...CHAT_RECIPE, firestoreId: 'rec-1' });
+      });
+
+      mockAgentResponse({
+        action: 'propose',
+        reply: 'Proposition',
+        recipe: {
+          title: 'Soupe à l\'huile',
+          description: 'Nouvelle description',
+          ingredients: ["50 g d'huile d'olive"],
+          steps: ['Faire chauffer 2 min / 100°C / vitesse 1.'],
+        },
+        changes: ['Beurre remplacé'],
+      });
+      await act(async () => {
+        await result.current.sendChatMessage('Remplace le beurre');
+      });
+
+      act(() => {
+        result.current.applyProposal(result.current.chatMessages[1].id);
+      });
+
+      mockAgentResponse({ ok: true });
+      await act(async () => {
+        await result.current.saveChatRecipe();
+      });
+
+      // Retour à l'accueil : la liste doit refléter la recette modifiée
+      const summary = result.current.savedRecipes.find(r => r.id === 'rec-1');
+      expect(summary?.title).toBe('Soupe à l\'huile');
+      expect(summary?.description).toBe('Nouvelle description');
+      // Les autres champs du résumé ne sont pas écrasés
+      expect(summary?.createdAt).toBe('2026-08-31T15:07:43.853Z');
     });
 
     it('affiche un message d\'erreur quand l\'agent échoue', async () => {

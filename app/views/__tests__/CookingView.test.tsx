@@ -88,7 +88,9 @@ describe('CookingView', () => {
     mockHandleFileChange = jest.fn();
     mockHandleUpload = jest.fn();
 
-    const baseProps = {
+    const isDarkMode = true;
+
+const baseProps = {
       view: 'cooking' as const,
       setView: mockSetView,
       recipe: mockRecipe,
@@ -99,7 +101,7 @@ describe('CookingView', () => {
       isTimerRunning: false,
       setIsTimerRunning: mockSetIsTimerRunning,
       currentTime: '12:00',
-      isDarkMode: true,
+      isDarkMode,
       setIsDarkMode: mockSetIsDarkMode,
       theme: {
         id: 'default',
@@ -135,6 +137,9 @@ describe('CookingView', () => {
       applyProposal: mockApplyProposal,
       rejectProposal: mockRejectProposal,
       saveChatRecipe: mockSaveChatRecipe,
+      hasUnsavedChanges: false,
+      isSavingChatRecipe: false,
+      isGeminiConfigured: true,
       cookedModalOpen: false,
       setCookedModalOpen: mockSetCookedModalOpen,
       selectedImage: null,
@@ -147,11 +152,11 @@ describe('CookingView', () => {
       setUploadSuccess: mockSetUploadSuccess,
       stepParams: defaultStepParams,
       stepIngredients: [],
-      checkedIngredients: new Set(),
+      checkedIngredients: new Set<string>(),
       setCheckedIngredients: mockSetCheckedIngredients,
       fileInputRef: { current: null },
       t: jest.fn((darkClass: string, lightClass: string) =>
-        baseProps.isDarkMode ? darkClass : lightClass,
+        isDarkMode ? darkClass : lightClass,
       ),
       openMealiePage: mockOpenMealiePage,
       formatTime: mockFormatTime,
@@ -326,6 +331,16 @@ describe('CookingView', () => {
       fireEvent.click(toggleButton);
       expect(mockSetIsDarkMode).toHaveBeenCalledWith(true);
     });
+  });
+
+  it('hides the AI assistant button when Gemini is not configured', () => {
+    render(<CookingView {...getMockedDefaultProps({ isGeminiConfigured: false })} />);
+    expect(screen.queryByLabelText('Assistant IA')).not.toBeInTheDocument();
+  });
+
+  it('shows the AI assistant button when Gemini is configured', () => {
+    render(<CookingView {...getMockedDefaultProps()} />);
+    expect(screen.getByLabelText('Assistant IA')).toBeInTheDocument();
   });
 
   describe('Chat Panel (agent + validation humaine)', () => {

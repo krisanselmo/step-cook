@@ -13,6 +13,8 @@ describe('InputView', () => {
   >;
 
   // Common props to pass to InputView for testing
+  const isDarkMode = true;
+
   const defaultProps = {
     rawText: '',
     setRawText: jest.fn(),
@@ -20,13 +22,16 @@ describe('InputView', () => {
     mealieRecipes: [],
     isMealieLoading: false,
     mealieError: null,
+    isMealieConfigured: true,
+    isFirestoreConfigured: true,
+    isGeminiConfigured: true,
     searchTerm: '',
     setSearchTerm: jest.fn(),
-    sortOption: 'date-desc',
+    sortOption: 'date-desc' as const,
     setSortOption: jest.fn(),
     fetchMealieRecipes: jest.fn(),
     loadMealieRecipe: jest.fn(),
-    isDarkMode: true,
+    isDarkMode,
     setIsDarkMode: jest.fn(),
     theme: {
       id: 'default',
@@ -55,7 +60,7 @@ describe('InputView', () => {
     },
     setActiveThemeId: jest.fn(),
     t: jest.fn((darkClass: string, lightClass: string) =>
-      defaultProps.isDarkMode ? darkClass : lightClass,
+      isDarkMode ? darkClass : lightClass,
     ),
     handleGeminiGenerate: jest.fn(),
     savedRecipes: [],
@@ -170,5 +175,76 @@ describe('InputView', () => {
   it('displays error state for Mealie recipes', () => {
     render(<InputView {...defaultProps} mealieError="Failed to load" />);
     expect(screen.getByText('Failed to load')).toBeInTheDocument();
+  });
+
+  it('hides Mealie entirely when it is not configured', () => {
+    render(
+      <InputView
+        {...defaultProps}
+        isMealieConfigured={false}
+        mealieError="Impossible de charger les recettes Mealie."
+      />,
+    );
+
+    // Ni bandeau d'erreur, ni filtre : l'intégration n'existe pas pour cet utilisateur
+    expect(screen.queryByText('Mealie indisponible')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mealie' })).not.toBeInTheDocument();
+    // Une seule source restante : filtrer par source n'a plus de sens
+    expect(screen.queryByRole('button', { name: 'IA' })).not.toBeInTheDocument();
+  });
+
+  it('hides the AI assistant when Gemini is not configured', () => {
+    render(<InputView {...defaultProps} isGeminiConfigured={false} />);
+
+    expect(screen.queryByText('Assistant IA')).not.toBeInTheDocument();
+    expect(screen.queryByText('Générer Recette')).not.toBeInTheDocument();
+    // Le mode manuel, lui, ne dépend d'aucune intégration
+    expect(screen.getByText('Mode Manuel')).toBeInTheDocument();
+  });
+
+  it('hides the saved recipes source when Firestore is not configured', () => {
+    render(
+      <InputView
+        {...defaultProps}
+        isFirestoreConfigured={false}
+        savedError="Impossible de charger les recettes sauvegardées."
+      />,
+    );
+
+    expect(screen.queryByText('Recettes IA indisponible')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'IA' })).not.toBeInTheDocument();
+  });
+
+  it('shows the Mealie filter when it is configured', () => {
+    render(<InputView {...defaultProps} isMealieConfigured={true} />);
+    expect(screen.getByRole('button', { name: 'Mealie' })).toBeInTheDocument();
+  });
+
+  it('keeps the saved recipes visible when Mealie fails', () => {
+    render(
+      <InputView
+        {...defaultProps}
+        mealieError="Impossible de charger les recettes Mealie."
+        savedRecipes={[
+          {
+            id: 'saved-1',
+            title: 'Clafoutis aux Figues',
+            createdAt: '2026-08-31T15:07:43.853Z',
+          },
+        ]}
+      />,
+    );
+
+    // Le bandeau signale la panne...
+    expect(screen.getByText('Mealie indisponible')).toBeInTheDocument();
+    // ...sans masquer la source qui a répondu
+    expect(screen.getByText('Clafoutis aux Figues')).toBeInTheDocument();
+    expect(screen.queryByText('Aucune recette trouvée.')).not.toBeInTheDocument();
+  });
+
+  it('offers a retry that refetches both sources', () => {
+    render(<InputView {...defaultProps} mealieError="Failed to load" />);
+    fireEvent.click(screen.getByLabelText('Réessayer Mealie'));
+    expect(defaultProps.fetchMealieRecipes).toHaveBeenCalled();
   });
 });
