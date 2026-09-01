@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { ProcessingView } from '../ProcessingView';
 import { useCookingState } from '@/app/hooks/useCookingState';
+import { makeCookingState, mockTheme } from '@/test-utils/cookingState';
 
 // Mock the useCookingState hook
 jest.mock('@/app/hooks/useCookingState');
@@ -16,31 +17,7 @@ describe('ProcessingView', () => {
   const isDarkMode = false;
 
   const defaultProps = {
-    theme: {
-      id: 'default',
-      name: 'Default',
-      title: 'Step Cook',
-      icon: () => <svg data-testid="theme-icon" />,
-      properties: {
-        font: 'font-sans',
-        radius: 'rounded-xl',
-        buttonStyle: 'base',
-      },
-      colors: {
-        accent: 'text-blue-500',
-        accentDarker: 'text-blue-600',
-        bgPrimary: 'bg-blue-500',
-        bgPrimaryHover: 'hover:bg-blue-600',
-        borderAccent: 'border-blue-500',
-        shadowAccent: 'shadow-blue-500',
-        checkedBgDark: 'bg-gray-800',
-        checkedBgLight: 'bg-gray-100',
-        rootBgDark: 'bg-gray-950',
-        rootBgLight: 'bg-gray-50',
-        cardBgDark: 'bg-gray-900',
-        cardBgLight: 'bg-white',
-      },
-    },
+    theme: mockTheme,
     t: jest.fn((darkClass: string, lightClass: string) =>
       isDarkMode ? darkClass : lightClass,
     ),
@@ -48,7 +25,9 @@ describe('ProcessingView', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseCookingState.mockReturnValue({ ...defaultProps, isDarkMode: true });
+    mockUseCookingState.mockReturnValue(
+      makeCookingState({ ...defaultProps, isDarkMode: true }),
+    );
   });
 
   it('renders the loading message and spinner', () => {
@@ -70,7 +49,9 @@ describe('ProcessingView', () => {
   });
 
   it('applies light mode background classes when isDarkMode is false', () => {
-    mockUseCookingState.mockReturnValue({ ...defaultProps, isDarkMode: false });
+    mockUseCookingState.mockReturnValue(
+      makeCookingState({ ...defaultProps, isDarkMode: false }),
+    );
     render(<ProcessingView {...defaultProps} />);
     expect(screen.getByTestId('processing-view-container')).toHaveClass(
       'bg-gray-50',

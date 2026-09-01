@@ -15,11 +15,16 @@ import { defaultTheme, THEMES } from '@/app/lib/themes';
 import {
   parseRecipe,
   parseIngredientLine,
-  cleanStepText,
-  extractStepParams,
+  EMPTY_STEP_PARAMS,
+  normalizeSteps,
+  isStructuredSchema,
   formatMealieToText,
-  isKeywordInText,
+  StepAccessory,
 } from '@/app/lib/utils';
+import {
+  DEFAULT_EQUIPMENT_IDS,
+  sanitizeEquipmentIds,
+} from '@/app/lib/equipment';
 
 export type ViewState = 'input' | 'processing' | 'cooking';
 export type SortOption = 'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc';
@@ -78,6 +83,11 @@ interface UseCookingState {
   setUploadSuccess: React.Dispatch<React.SetStateAction<boolean>>;
   stepParams: StepParams;
   stepIngredients: Ingredient[];
+  stepAccessories: StepAccessory[];
+  ownedEquipment: string[];
+  toggleEquipment: (id: string) => void;
+  equipmentModalOpen: boolean;
+  setEquipmentModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   checkedIngredients: Set<string>;
   setCheckedIngredients: React.Dispatch<React.SetStateAction<Set<string>>>;
   timerRef: React.MutableRefObject<NodeJS.Timeout | null>;
@@ -163,6 +173,49 @@ export const useCookingState = (): UseCookingState => {
     localStorage.setItem('isDarkMode', String(isDarkMode));
   }, [isDarkMode]);
 
+  // Matériel possédé (Varoma, Découpe-minute…) : configuration locale à l'appareil,
+  // envoyée à l'IA pour qu'elle ne propose que des étapes réalisables.
+  const [ownedEquipment, setOwnedEquipment] = useState<string[]>(
+    DEFAULT_EQUIPMENT_IDS,
+  );
+  const [equipmentModalOpen, setEquipmentModalOpen] = useState<boolean>(false);
+  // Passe à true une fois le localStorage lu : le deep link `?prompt=` attend ce
+  // signal pour ne pas générer une recette avec la configuration par défaut.
+  const [isEquipmentReady, setIsEquipmentReady] = useState<boolean>(false);
+
+  // Restauration post-montage, comme le thème (évite le mismatch d'hydratation).
+  useEffect(() => {
+    const stored = localStorage.getItem('ownedEquipment');
+
+    if (stored !== null) {
+      try {
+        setOwnedEquipment(sanitizeEquipmentIds(JSON.parse(stored)));
+      } catch {
+        // Valeur corrompue : on garde la configuration par défaut.
+        console.warn('[Équipement] configuration illisible, valeurs par défaut');
+      }
+    }
+
+    setIsEquipmentReady(true);
+  }, []);
+
+  // Persistance (en sautant le premier rendu, avant la restauration ci-dessus).
+  const equipmentHydrated = useRef(false);
+  useEffect(() => {
+    if (!equipmentHydrated.current) {
+      equipmentHydrated.current = true;
+
+      return;
+    }
+    localStorage.setItem('ownedEquipment', JSON.stringify(ownedEquipment));
+  }, [ownedEquipment]);
+
+  const toggleEquipment = useCallback((id: string) => {
+    setOwnedEquipment(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id],
+    );
+  }, []);
+
   const [mealieRecipes, setMealieRecipes] = useState<MealieRecipeSummary[]>([]);
   const [isMealieLoading, setIsMealieLoading] = useState<boolean>(false);
   const [mealieError, setMealieError] = useState<string | null>(null);
@@ -201,6 +254,7 @@ export const useCookingState = (): UseCookingState => {
     reverse: false,
   });
   const [stepIngredients, setStepIngredients] = useState<Ingredient[]>([]);
+  const [stepAccessories, setStepAccessories] = useState<StepAccessory[]>([]);
 
   const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(
     new Set(),
@@ -338,8 +392,12 @@ export const useCookingState = (): UseCookingState => {
         cookTime: data.cookTime,
         totalTime: data.totalTime,
         ingredients: data.ingredients || [],
-        steps: data.steps || [],
+        steps: normalizeSteps(data.steps, {
+          structured: isStructuredSchema(data.schemaVersion),
+          ingredients: data.ingredients || [],
+        }),
         firestoreId: data.id,
+        schemaVersion: data.schemaVersion,
       };
 
       setRecipe(loadedRecipe);
@@ -427,8 +485,10 @@ export const useCookingState = (): UseCookingState => {
 
   useEffect(() => {
     if (recipe && currentStep >= 0 && currentStep < recipe.steps.length) {
-      const stepText = recipe.steps[currentStep];
-      const params = extractStepParams(stepText);
+      const step = recipe.steps[currentStep];
+      // Réglages résolus au parsing : déclarés par le modèle en schéma 2,
+      // extraits du texte en schéma 1. Rien n'est relu ici.
+      const params = step.params ?? EMPTY_STEP_PARAMS;
 
       setStepParams(params);
 
@@ -440,22 +500,19 @@ export const useCookingState = (): UseCookingState => {
         setIsTimerRunning(false);
       }
 
-      const matchedIngredients = recipe.ingredients.filter(
-        ing =>
-          ing.keywords.length > 0 &&
-          ing.keywords.some(keyword => isKeywordInText(keyword, stepText)),
-      );
+      // Les ingrédients de l'étape sont résolus en amont (déclarés par le
+      // modèle, ou déduits du texte pour les recettes en schéma 1) : ici on ne
+      // fait que retrouver les objets correspondants.
+      const stepIngredientTexts = new Set(step.ingredients ?? []);
 
-      setStepIngredients(matchedIngredients);
+      setStepIngredients(
+        recipe.ingredients.filter(ing => stepIngredientTexts.has(ing.fullText)),
+      );
+      setStepAccessories(step.accessories ?? []);
     } else {
-      setStepParams({
-        time: '--:--',
-        temp: '---',
-        speed: '---',
-        seconds: 0,
-        reverse: false,
-      });
+      setStepParams(EMPTY_STEP_PARAMS);
       setStepIngredients([]);
+      setStepAccessories([]);
     }
   }, [currentStep, recipe]);
 
@@ -514,7 +571,7 @@ export const useCookingState = (): UseCookingState => {
       const res = await fetch('/api/gemini/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipe, message, history }),
+        body: JSON.stringify({ recipe, message, history, equipment: ownedEquipment }),
       });
 
       if (!res.ok) {
@@ -526,6 +583,11 @@ export const useCookingState = (): UseCookingState => {
       // Une proposition porte la recette complète modifiée : on la prépare tout de
       // suite (mots-clés des ingrédients, notation Thermomix) pour que « Appliquer »
       // se réduise à un remplacement d'état.
+      const proposedIngredients =
+        data.action === 'propose' && Array.isArray(data.recipe?.ingredients)
+          ? data.recipe.ingredients.map((ing: string) => parseIngredientLine(ing))
+          : recipe.ingredients;
+
       const proposedRecipe =
         data.action === 'propose' && data.recipe
           ? {
@@ -535,12 +597,14 @@ export const useCookingState = (): UseCookingState => {
             prepTime: data.recipe.prepTime,
             cookTime: data.recipe.cookTime,
             totalTime: data.recipe.totalTime,
-            ingredients: Array.isArray(data.recipe.ingredients)
-              ? data.recipe.ingredients.map((ing: string) => parseIngredientLine(ing))
-              : recipe.ingredients,
+            ingredients: proposedIngredients,
             steps: Array.isArray(data.recipe.steps)
-              ? data.recipe.steps.map((step: string) => cleanStepText(step))
+              ? normalizeSteps(data.recipe.steps, {
+                structured: true,
+                ingredients: proposedIngredients,
+              })
               : recipe.steps,
+            schemaVersion: data.recipe.schemaVersion ?? recipe.schemaVersion,
           }
           : null;
 
@@ -663,7 +727,7 @@ export const useCookingState = (): UseCookingState => {
       const res = await fetch('/api/gemini/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userPrompt }),
+        body: JSON.stringify({ userPrompt, equipment: ownedEquipment }),
       });
 
       if (!res.ok) {
@@ -671,10 +735,26 @@ export const useCookingState = (): UseCookingState => {
         throw new Error(errorData.error || 'Erreur génération Gemini.');
       }
 
-      const data = await res.json();
-      const generatedText = data.generatedRecipeText;
-      setRawText(generatedText);
-      const parsedRecipe = parseRecipe(generatedText);
+      // La route renvoie une recette déjà structurée et validée (sortie JSON
+      // native de Gemini) : rien à parser ici.
+      const { recipe: generated } = await res.json();
+      const generatedIngredients = (generated.ingredients || []).map(
+        (ing: string) => parseIngredientLine(ing),
+      );
+      const parsedRecipe: Recipe = {
+        title: generated.title,
+        description: generated.description,
+        prepTime: generated.prepTime,
+        cookTime: generated.cookTime,
+        totalTime: generated.totalTime,
+        ingredients: generatedIngredients,
+        steps: normalizeSteps(generated.steps, {
+          structured: true,
+          ingredients: generatedIngredients,
+        }),
+        schemaVersion: generated.schemaVersion,
+      };
+
       setRecipe(parsedRecipe);
       setCheckedIngredients(new Set());
       setChatMessages([]);
@@ -702,12 +782,18 @@ export const useCookingState = (): UseCookingState => {
           (err instanceof Error ? err.message : String(err)),
       );
     }
-  }, [fetchSavedRecipes]);
+  }, [fetchSavedRecipes, ownedEquipment]);
 
   // Deep link for external tools: /?prompt=<text> auto-generates via Gemini.
   // The URL is cleaned right away so a refresh (or a re-run of the effect)
   // doesn't re-trigger a token-consuming generation.
+  // On attend la restauration du matériel : sinon la recette serait générée avec
+  // la configuration par défaut plutôt que celle de l'utilisateur.
   useEffect(() => {
+    if (!isEquipmentReady) {
+      return;
+    }
+
     const prompt = (
       new URLSearchParams(window.location.search).get('prompt') || ''
     ).trim();
@@ -717,7 +803,7 @@ export const useCookingState = (): UseCookingState => {
     }
     window.history.replaceState(null, '', window.location.pathname);
     generateGeminiRecipe(prompt);
-  }, [generateGeminiRecipe]);
+  }, [generateGeminiRecipe, isEquipmentReady]);
 
   const handleIngredientAction = (ingredientFullText: string) => {
     const newChecked = new Set(checkedIngredients);
@@ -833,6 +919,11 @@ export const useCookingState = (): UseCookingState => {
     setUploadSuccess,
     stepParams,
     stepIngredients,
+    stepAccessories,
+    ownedEquipment,
+    toggleEquipment,
+    equipmentModalOpen,
+    setEquipmentModalOpen,
     checkedIngredients,
     setCheckedIngredients,
     timerRef,

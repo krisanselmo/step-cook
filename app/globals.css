@@ -54,6 +54,20 @@
   }
 }
 
+@keyframes steam {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scaleY(0.8);
+  }
+  30% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(1.15);
+  }
+}
+
 .animate-spin-slow {
   animation: spin-slow 3s linear infinite;
 }
@@ -62,6 +76,10 @@
 }
 .animate-wiggle {
   animation: wiggle 0.5s ease-in-out infinite;
+}
+.animate-steam {
+  animation: steam 2.4s ease-in-out infinite;
+  transform-origin: bottom center;
 }
 
 /* Utilitaires */

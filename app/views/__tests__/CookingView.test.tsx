@@ -4,6 +4,8 @@ import '@testing-library/jest-dom';
 import { CookingView } from '../CookingView';
 import { useCookingState } from '@/app/hooks/useCookingState';
 import { ChatMessage, Recipe, StepParams } from '@/app/lib/types';
+import { DEFAULT_EQUIPMENT_IDS } from '@/app/lib/equipment';
+import { makeCookingState, mockTheme } from '@/test-utils/cookingState';
 
 // Mock the useCookingState hook
 jest.mock('@/app/hooks/useCookingState');
@@ -20,9 +22,9 @@ describe('CookingView', () => {
       { fullText: '2 Sugar', keywords: ['sugar'] },
     ],
     steps: [
-      'Step 1: Mix ingredients',
-      'Step 2: Cook for 5 min',
-      'Step 3: Serve warm',
+      { text: 'Step 1: Mix ingredients' },
+      { text: 'Step 2: Cook for 5 min' },
+      { text: 'Step 3: Serve warm' },
     ],
   };
 
@@ -51,6 +53,8 @@ describe('CookingView', () => {
   let mockSetIsUploading: jest.Mock;
   let mockSetUploadSuccess: jest.Mock;
   let mockSetCheckedIngredients: jest.Mock;
+  let mockToggleEquipment: jest.Mock;
+  let mockSetEquipmentModalOpen: jest.Mock;
   let mockOpenMealiePage: jest.Mock;
   let mockFormatTime: jest.Mock;
   let mockHandleIngredientAction: jest.Mock;
@@ -77,6 +81,8 @@ describe('CookingView', () => {
     mockSetIsUploading = jest.fn();
     mockSetUploadSuccess = jest.fn();
     mockSetCheckedIngredients = jest.fn();
+    mockToggleEquipment = jest.fn();
+    mockSetEquipmentModalOpen = jest.fn();
     mockOpenMealiePage = jest.fn();
     mockFormatTime = jest.fn((seconds: number) => {
       const m = Math.floor(seconds / 60);
@@ -90,71 +96,33 @@ describe('CookingView', () => {
 
     const isDarkMode = true;
 
-const baseProps = {
-      view: 'cooking' as const,
+    const baseProps = makeCookingState({
+      view: 'cooking',
       setView: mockSetView,
       recipe: mockRecipe,
       currentStep: -1,
       setCurrentStep: mockSetCurrentStep,
-      timer: 0,
       setTimer: mockSetTimer,
-      isTimerRunning: false,
       setIsTimerRunning: mockSetIsTimerRunning,
-      currentTime: '12:00',
       isDarkMode,
       setIsDarkMode: mockSetIsDarkMode,
-      theme: {
-        id: 'default',
-        name: 'Default',
-        title: 'Step Cook',
-        icon: () => <svg data-testid="theme-icon" />,
-        properties: {
-          font: 'font-sans',
-          radius: 'rounded-xl',
-          buttonStyle: 'base',
-        },
-        colors: {
-          accent: 'text-blue-500',
-          accentDarker: 'text-blue-600',
-          bgPrimary: 'bg-blue-500',
-          bgPrimaryHover: 'hover:bg-blue-600',
-          borderAccent: 'border-blue-500',
-          shadowAccent: 'shadow-blue-500',
-          checkedBgDark: 'bg-gray-800',
-          checkedBgLight: 'bg-gray-100',
-          rootBgDark: 'bg-gray-950',
-          rootBgLight: 'bg-gray-50',
-          cardBgDark: 'bg-gray-900',
-          cardBgLight: 'bg-white',
-        },
-      },
+      theme: mockTheme,
       setActiveThemeId: mockSetActiveThemeId,
-      chatOpen: false,
       setChatOpen: mockSetChatOpen,
-      chatMessages: [],
-      isChatLoading: false,
       sendChatMessage: mockSendChatMessage,
       applyProposal: mockApplyProposal,
       rejectProposal: mockRejectProposal,
       saveChatRecipe: mockSaveChatRecipe,
-      hasUnsavedChanges: false,
-      isSavingChatRecipe: false,
-      isGeminiConfigured: true,
-      cookedModalOpen: false,
       setCookedModalOpen: mockSetCookedModalOpen,
-      selectedImage: null,
       setSelectedImage: mockSetSelectedImage,
-      previewUrl: null,
       setPreviewUrl: mockSetPreviewUrl,
-      isUploading: false,
       setIsUploading: mockSetIsUploading,
-      uploadSuccess: false,
       setUploadSuccess: mockSetUploadSuccess,
       stepParams: defaultStepParams,
-      stepIngredients: [],
-      checkedIngredients: new Set<string>(),
+      ownedEquipment: DEFAULT_EQUIPMENT_IDS,
+      toggleEquipment: mockToggleEquipment,
+      setEquipmentModalOpen: mockSetEquipmentModalOpen,
       setCheckedIngredients: mockSetCheckedIngredients,
-      fileInputRef: { current: null },
       t: jest.fn((darkClass: string, lightClass: string) =>
         isDarkMode ? darkClass : lightClass,
       ),
@@ -163,7 +131,7 @@ const baseProps = {
       handleIngredientAction: mockHandleIngredientAction,
       handleFileChange: mockHandleFileChange,
       handleUpload: mockHandleUpload,
-    };
+    });
 
     return { ...baseProps, ...overrides };
   };

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/app/lib/firebase';
+import { toRecipeDocument } from '../document';
 
 export async function GET(
   _request: Request,
@@ -53,15 +54,7 @@ export async function PUT(
     }
 
     const db = getDb();
-    await db.collection('recipes').doc(id).update({
-      title: recipe.title,
-      description: recipe.description || null,
-      prepTime: recipe.prepTime || null,
-      cookTime: recipe.cookTime || null,
-      totalTime: recipe.totalTime || null,
-      ingredients: recipe.ingredients || [],
-      steps: recipe.steps,
-    });
+    await db.collection('recipes').doc(id).update(toRecipeDocument(recipe));
 
     return NextResponse.json({ message: 'Recette mise à jour' });
   } catch (error) {

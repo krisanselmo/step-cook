@@ -1,0 +1,129 @@
+import React from 'react';
+import { ThemePlugin } from '@/app/lib/types';
+import { useCookingState } from '@/app/hooks/useCookingState';
+
+type CookingState = ReturnType<typeof useCookingState>;
+
+/** Thème neutre, partagé par les tests de vues. */
+export const mockTheme: ThemePlugin = {
+  id: 'default',
+  name: 'Default',
+  title: 'Step Cook',
+  icon: () => <svg data-testid="theme-icon" />,
+  properties: {
+    font: 'font-sans',
+    radius: 'rounded-xl',
+    buttonStyle: 'base',
+  },
+  colors: {
+    accent: 'text-blue-500',
+    accentDarker: 'text-blue-600',
+    bgPrimary: 'bg-blue-500',
+    bgPrimaryHover: 'hover:bg-blue-600',
+    borderAccent: 'border-blue-500',
+    shadowAccent: 'shadow-blue-500',
+    checkedBgDark: 'bg-gray-800',
+    checkedBgLight: 'bg-gray-100',
+    rootBgDark: 'bg-gray-950',
+    rootBgLight: 'bg-gray-50',
+    cardBgDark: 'bg-gray-900',
+    cardBgLight: 'bg-white',
+  },
+};
+
+/**
+ * État complet du hook, entièrement mocké, à surcharger par test.
+ *
+ * Les vues reçoivent leurs props depuis `useCookingState` : un objet partiel
+ * compilait mal et obligeait chaque fichier de test à redéclarer le même
+ * décor. Le type est ici celui du hook, donc un champ ajouté au hook casse la
+ * compilation des tests plutôt que de passer inaperçu.
+ */
+export const makeCookingState = (
+  overrides: Partial<CookingState> = {},
+): CookingState => ({
+  view: 'input',
+  setView: jest.fn(),
+  rawText: '',
+  setRawText: jest.fn(),
+  recipe: null,
+  setRecipe: jest.fn(),
+  currentStep: -1,
+  setCurrentStep: jest.fn(),
+  timer: 0,
+  setTimer: jest.fn(),
+  isTimerRunning: false,
+  setIsTimerRunning: jest.fn(),
+  currentTime: '12:00',
+  isDarkMode: true,
+  setIsDarkMode: jest.fn(),
+  activeThemeId: 'default',
+  setActiveThemeId: jest.fn(),
+  theme: mockTheme,
+  mealieRecipes: [],
+  isMealieLoading: false,
+  mealieError: null,
+  isMealieConfigured: true,
+  searchTerm: '',
+  setSearchTerm: jest.fn(),
+  sortOption: 'date-desc',
+  setSortOption: jest.fn(),
+  chatOpen: false,
+  setChatOpen: jest.fn(),
+  chatMessages: [],
+  isChatLoading: false,
+  sendChatMessage: jest.fn(),
+  applyProposal: jest.fn(),
+  rejectProposal: jest.fn(),
+  saveChatRecipe: jest.fn(),
+  hasUnsavedChanges: false,
+  isSavingChatRecipe: false,
+  cookedModalOpen: false,
+  setCookedModalOpen: jest.fn(),
+  selectedImage: null,
+  setSelectedImage: jest.fn(),
+  previewUrl: null,
+  setPreviewUrl: jest.fn(),
+  isUploading: false,
+  setIsUploading: jest.fn(),
+  uploadSuccess: false,
+  setUploadSuccess: jest.fn(),
+  stepParams: {
+    time: '--:--',
+    temp: '---',
+    speed: '---',
+    seconds: 0,
+    reverse: false,
+  },
+  stepIngredients: [],
+  stepAccessories: [],
+  ownedEquipment: [],
+  toggleEquipment: jest.fn(),
+  equipmentModalOpen: false,
+  setEquipmentModalOpen: jest.fn(),
+  checkedIngredients: new Set<string>(),
+  setCheckedIngredients: jest.fn(),
+  timerRef: { current: null },
+  fileInputRef: { current: null },
+  t: jest.fn((darkClass: string, lightClass: string) =>
+    overrides.isDarkMode === false ? lightClass : darkClass,
+  ),
+  fetchMealieRecipes: jest.fn(),
+  loadMealieRecipe: jest.fn(),
+  openMealiePage: jest.fn(),
+  formatTime: jest.fn((seconds: number) => `${seconds}s`),
+  handleProcess: jest.fn(),
+  handleIngredientAction: jest.fn(),
+  handleFileChange: jest.fn(),
+  handleUpload: jest.fn(),
+  generateGeminiRecipe: jest.fn(),
+  savedRecipes: [],
+  isSavedLoading: false,
+  savedError: null,
+  isFirestoreConfigured: true,
+  isGeminiConfigured: true,
+  fetchSavedRecipes: jest.fn(),
+  loadSavedRecipe: jest.fn(),
+  deleteSavedRecipe: jest.fn(),
+  ...overrides,
+});

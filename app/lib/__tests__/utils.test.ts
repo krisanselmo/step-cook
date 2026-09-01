@@ -139,7 +139,7 @@ describe('parseRecipe', () => {
     expect(result.ingredients.length).toBe(2);
     expect(result.ingredients[0].fullText).toBe('200g farine');
     expect(result.steps.length).toBe(2);
-    expect(result.steps[0]).toBe('1. Mélanger tout');
+    expect(result.steps[0].text).toBe('1. Mélanger tout');
   });
 
   it('should parse a JSON recipe', () => {
@@ -163,8 +163,8 @@ Préparation:
 2. Étape avec //`;
     const result = parseRecipe(input);
     // La notation `//` est désormais normalisée en emojis lisibles (sens inverse).
-    expect(result.steps[0]).toBe('1. Étape avec /⏪/🥄2');
-    expect(result.steps[1]).toBe('2. Étape avec /⏪/🥄');
+    expect(result.steps[0].text).toBe('1. Étape avec /⏪/🥄2');
+    expect(result.steps[1].text).toBe('2. Étape avec /⏪/🥄');
   });
 
   it('should assign a slug if provided for a JSON recipe', () => {

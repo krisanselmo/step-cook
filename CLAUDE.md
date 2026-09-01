@@ -28,7 +28,8 @@ npm test          # Jest
 app/
 ├── api/
 │   ├── gemini/
-│   │   ├── prompt.ts          # Prompt système (format JSON attendu)
+│   │   ├── recipeSchema.ts    # RECIPE_SCHEMA : sortie structurée imposée aux 2 routes
+│   │   ├── prompt.ts          # buildPrompt() : format JSON attendu + matériel possédé
 │   │   ├── generate/route.ts  # POST - Génère une recette
 │   │   ├── config/route.ts    # GET  - Gemini est-il configuré ?
 │   │   └── chat/              # POST - Agent sur la recette courante : répond, ou
@@ -42,13 +43,18 @@ app/
 │   │   ├── route.ts           # GET (lister) + POST (sauvegarder)
 │   │   └── [id]/route.ts      # GET (détail) + PUT (modifier) + DELETE
 │   └── substitute/            # POST - Substitution d'ingrédient
-├── components/ui/             # Button, ThemeDropdown
+├── components/ui/             # Button, ThemeDropdown, EquipmentModal (config matériel),
+│                              # StepAccessories (panneau Varoma / Découpe-minute),
+│                              # VaromaStack & CutterDisc (visuels SVG)
 ├── hooks/
 │   └── useCookingState.ts     # Hook principal : état global de l'app
 ├── lib/
-│   ├── types.ts               # Recipe, Ingredient, StepParams, ChatMessage, ThemePlugin…
-│   ├── utils.ts               # parseRecipe(), extractStepParams() (temps, température,
-│   │                          # vitesse, sens inverse), Levenshtein
+│   ├── types.ts               # Recipe, RecipeStep, Ingredient, StepParams, ChatMessage…
+│   ├── utils.ts               # parseRecipe(), normalizeSteps(), extractStepParams() (temps,
+│   │                          # température, vitesse, sens inverse), detectStepAccessories(),
+│   │                          # RECIPE_SCHEMA_VERSION, Levenshtein
+│   ├── equipment.ts           # Catalogue du matériel + 4 modes du Découpe-minute,
+│   │                          # buildEquipmentPromptBlock() pour les pré-prompts IA
 │   ├── firebase.ts            # Firebase Admin SDK (getDb(), isFirebaseConfigured())
 │   └── themes.ts              # Thèmes visuels
 ├── views/
@@ -75,3 +81,10 @@ app/
   texte en fallback) ; les recettes Firestore sont déjà structurées
 - Thèmes pluggables (`ThemePlugin`), dark/light via le helper `t(darkClass, lightClass)`
 - Une intégration non configurée est masquée de l'UI ; en panne, elle affiche un bandeau
+- `schemaVersion` (Firestore) arbitre la lecture d'une recette : absent/1 = étapes en texte,
+  réglages/accessoires/ingrédients déduits par heuristique ; 2 = l'étape déclare `settings`,
+  `accessories` et `ingredients`, et **aucun regex ne tourne**. Gemini produit du 2 ; Mealie et
+  le copier-coller manuel restent du texte
+- Le gobelet doseur est en place par défaut : seul son retrait (`state: 'removed'`) est affiché
+- Le matériel possédé est une config locale (`localStorage`, clé `ownedEquipment`), envoyée
+  à Gemini dans le pré-prompt : l'IA ne propose que des étapes réalisables avec
