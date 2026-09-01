@@ -20,13 +20,13 @@ interface StepAccessoriesProps {
   accessories: StepAccessory[];
   ownedEquipment: string[];
   isTimerRunning: boolean;
-  /** Ouvre la configuration du matériel (depuis l'alerte « non configuré »). */
+  /** Opens the equipment configuration. */
   onConfigure: () => void;
   theme: ThemePlugin;
   t: (dark: string, light: string) => string;
 }
 
-/** Bandeau affiché quand l'étape réclame un accessoire non configuré. */
+/** Shown when the step needs an accessory the user has not configured. */
 const MissingBanner: React.FC<{
   name: string;
   onConfigure: () => void;
@@ -64,8 +64,7 @@ export const StepAccessories: React.FC<StepAccessoriesProps> = ({
   );
 
   const detectedMode = cutter?.cutterMode as CutterModeId | undefined;
-  // Le mode détecté sert d'amorce ; l'utilisateur peut en choisir un autre quand
-  // la recette ne le précise pas (ou se trompe).
+  // A seed only: the user can pick another when the recipe omits it.
   const [selectedMode, setSelectedMode] = useState<CutterModeId | undefined>(
     detectedMode,
   );

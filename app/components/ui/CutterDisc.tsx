@@ -6,24 +6,20 @@ import { CutterModeId } from '@/app/lib/equipment';
 interface CutterDiscProps {
   mode: CutterModeId;
   size?: number;
-  /** Classe de couleur (le disque est dessiné en `currentColor`). */
+  /** Colour class; the disc is drawn in `currentColor`. */
   className?: string;
-  /** Fait tourner le disque, pendant que le timer de l'étape tourne. */
+  /** Spins while the step timer runs. */
   spinning?: boolean;
 }
 
-/**
- * Disque du Découpe-minute, dessiné selon le mode de coupe : fentes de découpe
- * pour les tranches, perforations de râpe pour le râpé.
- */
+/** Slits for slicing modes, perforations for grating ones. */
 export const CutterDisc: React.FC<CutterDiscProps> = ({
   mode,
   size = 64,
   className = '',
   spinning = false,
 }) => {
-  // Fentes radiales : les tranches épaisses ont des fentes plus larges et moins
-  // nombreuses que les tranches fines.
+  // Thick slices get wider, fewer slits than thin ones.
   const slits =
     mode === 'tranches-fines'
       ? [0, 90, 180, 270].map(angle => ({ angle, width: 3 }))
@@ -31,7 +27,7 @@ export const CutterDisc: React.FC<CutterDiscProps> = ({
         ? [0, 120, 240].map(angle => ({ angle, width: 7 }))
         : [];
 
-  // Perforations de râpe, réparties sur deux couronnes.
+  // Grating holes, spread over two rings.
   const holes: { cx: number; cy: number; r: number }[] = [];
 
   if (mode === 'rape-fin' || mode === 'rape-epais') {

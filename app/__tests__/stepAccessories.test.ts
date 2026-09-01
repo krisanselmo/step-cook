@@ -63,7 +63,7 @@ describe('detectStepAccessories', () => {
   });
 
   describe('gobelet doseur', () => {
-    // En place par défaut : seul son retrait est une information.
+    // On the lid by default: only its removal is information.
     it('ne signale que son retrait', () => {
       expect(detectStepAccessories('Retirer le gobelet doseur.')).toEqual([
         { id: GOBELET_ID, state: 'removed' },

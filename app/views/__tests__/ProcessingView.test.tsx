@@ -5,7 +5,6 @@ import { ProcessingView } from '../ProcessingView';
 import { useCookingState } from '@/app/hooks/useCookingState';
 import { makeCookingState, mockTheme } from '@/test-utils/cookingState';
 
-// Mock the useCookingState hook
 jest.mock('@/app/hooks/useCookingState');
 
 describe('ProcessingView', () => {
@@ -13,7 +12,7 @@ describe('ProcessingView', () => {
     typeof useCookingState
   >;
 
-  // defaultProps ne porte pas isDarkMode : son `t` renvoie toujours la classe claire.
+  // defaultProps carries no isDarkMode, so its `t` always returns the light class.
   const isDarkMode = false;
 
   const defaultProps = {
@@ -38,8 +37,7 @@ describe('ProcessingView', () => {
   });
 
   it('applies dark mode background classes when isDarkMode is true', () => {
-    // ProcessingView est piloté par ses props : on fournit un `t` qui renvoie la
-    // classe sombre (le `t` par défaut de defaultProps renvoie toujours la claire).
+    // Props-driven, so pass a `t` that returns the dark class.
     const t = jest.fn((darkClass: string) => darkClass);
     render(<ProcessingView {...defaultProps} t={t} />);
     expect(screen.getByTestId('processing-view-container')).toHaveClass(

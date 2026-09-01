@@ -8,11 +8,9 @@ import {
 } from './fixtures';
 
 /**
- * Génération Gemini de bout en bout, avec le modèle mocké.
- *
- * En schéma 2 l'étape déclare ses réglages, ses accessoires et ses ingrédients,
- * et l'app ne relit plus son texte : ces tests vérifient que chaque déclaration
- * arrive bien jusqu'à l'écran, et jusqu'à la sauvegarde.
+ * End-to-end generation with the model mocked. In schema 2 the step declares
+ * everything and the app never re-reads its text, so these assert each
+ * declaration reaches the screen and the save payload.
  */
 
 const generate = async (page: import('@playwright/test').Page) => {
@@ -25,7 +23,7 @@ const generate = async (page: import('@playwright/test').Page) => {
   ).toBeVisible();
 };
 
-/** Avance jusqu'à l'étape `n` (1-indexée) depuis l'aperçu. */
+/** Advances to step `n` (1-indexed) from the overview. */
 const goToStep = async (page: import('@playwright/test').Page, n: number) => {
   for (let i = 0; i < n; i++) {
     await page.getByRole('button', { name: 'Étape suivante' }).click();
@@ -59,7 +57,6 @@ test('renseigne les cadrans depuis les réglages déclarés', async ({ page }) =
   await generate(page);
   await goToStep(page, 2);
 
-  // settings: { seconds: 180, temperature: '120', speed: '1' }
   await expect(page.getByText('03:00', { exact: true })).toBeVisible();
   await expect(page.getByText('120°C', { exact: true })).toBeVisible();
 });
@@ -70,7 +67,7 @@ test('affiche les ingrédients déclarés par l’étape', async ({ page }) => {
   await generate(page);
   await goToStep(page, 3);
 
-  // Seul l'ingrédient déclaré par l'étape 3 apparaît sous l'instruction.
+  // Only the ingredient step 3 declares shows under the instruction.
   await expect(
     page.getByRole('button', { name: /800g de carottes/ }),
   ).toBeVisible();
@@ -98,11 +95,11 @@ test('ne signale le gobelet doseur que lorsqu’il faut le retirer', async ({
   await page.goto('/');
   await generate(page);
 
-  // Étape 2 : gobelet en place, donc rien à signaler.
+  // Step 2: cup on the lid, nothing to report.
   await goToStep(page, 2);
   await expect(page.getByRole('button', { name: /gobelet/i })).toHaveCount(0);
 
-  // Étape 4 : déclaré `state: 'removed'`.
+  // Step 4 declares `state: 'removed'`.
   await page.getByRole('button', { name: 'Étape suivante' }).click();
   await page.getByRole('button', { name: 'Étape suivante' }).click();
   await expect(page.getByText('Étape 4', { exact: true })).toBeVisible();
@@ -126,9 +123,8 @@ test('n’affiche ni minuteur ni matériel sur une étape sans robot', async ({
 test('sauvegarde la recette en conservant les données structurées', async ({
   page,
 }) => {
-  // Régression : le client re-normalisait la réponse de la route sans lui
-  // repasser la liste d'ingrédients, ce qui effaçait silencieusement les
-  // ingrédients de chaque étape avant l'enregistrement.
+  // Regression: the client re-normalised the route response without passing
+  // the ingredient list back, erasing every step's ingredients before saving.
   const saved = await mockGeminiGenerate(page);
 
   await page.goto('/');
@@ -166,7 +162,7 @@ test('sauvegarde la recette en conservant les données structurées', async ({
     speed: '1',
   });
 
-  // Étape sans robot : aucun réglage attaché.
+  // No appliance, so no settings attached.
   expect(recipe.steps[5].params).toBeUndefined();
 });
 

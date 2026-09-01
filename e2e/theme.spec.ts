@@ -8,16 +8,15 @@ test.beforeEach(async ({ page }) => {
 test('le choix du thème est persisté dans le localStorage', async ({ page }) => {
   await page.goto('/');
 
-  // Ouvre le sélecteur de thème (bouton avec title="Changer de thème").
   await page.getByTitle('Changer de thème').click();
   await page.getByRole('button', { name: 'Mario' }).click();
 
-  // Persisté côté client...
+  // Persisted client-side...
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem('activeThemeId')))
     .toBe('mario');
 
-  // ...et restauré après rechargement.
+  // ...and restored after a reload.
   await page.reload();
   await expect(page.getByTitle('Changer de thème')).toContainText('Mario');
 });
@@ -25,7 +24,6 @@ test('le choix du thème est persisté dans le localStorage', async ({ page }) =
 test('le mode sombre/clair est persisté', async ({ page }) => {
   await page.goto('/');
 
-  // Par défaut sombre : le bouton propose « Passer en mode clair ».
   await page.getByRole('button', { name: 'Passer en mode clair' }).click();
 
   await expect
@@ -33,7 +31,6 @@ test('le mode sombre/clair est persisté', async ({ page }) => {
     .toBe('false');
 
   await page.reload();
-  // En mode clair, le bouton propose désormais « Passer en mode sombre ».
   await expect(
     page.getByRole('button', { name: 'Passer en mode sombre' }),
   ).toBeVisible();

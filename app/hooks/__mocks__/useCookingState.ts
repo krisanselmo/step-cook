@@ -1,6 +1,5 @@
 import { jest } from '@jest/globals';
 
-// Mock for useCookingState hook
 export const useCookingState = jest.fn(() => ({
   view: 'input',
   setView: jest.fn(),
@@ -109,6 +108,3 @@ export const useCookingState = jest.fn(() => ({
   deleteSavedRecipe: jest.fn(),
 }));
 
-// Re-export original types if needed, but not common for mock files
-// import type * as OriginalModule from '../useCookingState';
-// export * from '../useCookingState';

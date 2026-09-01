@@ -9,16 +9,13 @@ import {
   structuredProposal,
 } from './fixtures';
 
-/** Réponse de l'agent : réponse simple, sans toucher à la recette. */
+/** Plain answer, recipe untouched. */
 const answerResponse = {
   action: 'answer',
   reply: 'Le sens inverse évite de hacher les morceaux pendant la cuisson.',
 };
 
-/**
- * Proposition sur une recette issue du mode manuel (schéma 1 : étapes en
- * texte). L'agent répond en schéma 2, l'app doit encaisser le mélange.
- */
+/** Schema-2 proposal over a schema-1 recipe: the app must take the mix. */
 const proposeResponse = {
   action: 'propose',
   reply: "Je te propose de remplacer le beurre par de l'huile de coco.",
@@ -60,7 +57,7 @@ const openChat = async (page: import('@playwright/test').Page) => {
   await expect(page.getByText('Questions et modifications')).toBeVisible();
 };
 
-/** Demande une modification puis accepte la proposition renvoyée. */
+/** Asks for a change, then accepts the proposal. */
 const proposeAndAccept = async (
   page: import('@playwright/test').Page,
   message: string,
@@ -105,7 +102,7 @@ test('propose une modification et attend la validation avant de l’appliquer', 
     page.getByText("Beurre remplacé par de l'huile de coco"),
   ).toBeVisible();
 
-  // Tant qu'on n'a pas validé, la recette affichée reste l'originale
+  // Until validated, the displayed recipe stays the original.
   await page.getByRole('button', { name: 'Ignorer' }).click();
   await expect(page.getByText('Proposition ignorée')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Appliquer' })).toHaveCount(0);
@@ -137,7 +134,7 @@ test('conserve les données structurées de la proposition appliquée', async ({
   await proposeAndAccept(page, 'Remplace le beurre');
   await page.getByRole('button', { name: 'Fermer' }).click();
 
-  // Étape 1 : réglages et ingrédients déclarés par l'agent, pas relus du texte.
+  // Declared by the agent, not re-read from the text.
   await page.getByRole('button', { name: 'Étape suivante' }).click();
   await expect(page.getByText('Étape 1', { exact: true })).toBeVisible();
   await expect(page.getByText('03:00', { exact: true })).toBeVisible();
@@ -148,7 +145,7 @@ test('conserve les données structurées de la proposition appliquée', async ({
   await expect(
     page.getByRole('button', { name: /200g de chocolat noir/ }),
   ).toBeVisible();
-  // Un ingrédient non déclaré par cette étape n'y apparaît pas.
+  // An ingredient this step does not declare stays out.
   await expect(page.getByRole('button', { name: /50g de farine/ })).toHaveCount(0);
 });
 
@@ -175,7 +172,7 @@ test('propose sur une recette générée sans perdre son schéma', async ({
     page.getByRole('button', { name: /150g de crème fraîche/ }),
   ).toHaveCount(0);
 
-  // Le Découpe-minute et son mode survivent à la proposition.
+  // The cutter and its mode survive the proposal.
   await page.getByRole('button', { name: 'Étape suivante' }).click();
   await page.getByRole('button', { name: 'Étape suivante' }).click();
   await page.getByRole('button', { name: 'Étape suivante' }).click();

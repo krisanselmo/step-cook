@@ -33,21 +33,17 @@ export const isKeywordInText = (keyword: string, text: string): boolean => {
   const normKeyword = normalizeText(keyword);
   const normText = normalizeText(text);
 
-  // On sépare le texte de l'étape en mots individuels (en ignorant la ponctuation)
   const words = normText.split(/[\s,.;:!?\(\)'"’\-]+/);
 
   for (const word of words) {
-    // On ignore les petits mots du texte pour éviter le bruit
     if (word.length < 3 && normKeyword.length >= 3) {
       continue;
     }
 
-    // Correspondance exacte
     if (word === normKeyword) {
       return true;
     }
 
-    // Tolérance dynamique basée sur la taille du mot-clé
     let allowedDistance = 0;
 
     if (normKeyword.length > 5) {
@@ -56,19 +52,17 @@ export const isKeywordInText = (keyword: string, text: string): boolean => {
       allowedDistance = 1; // Mots moyens : 1 erreur max
     }
 
-    // Si on est dans la tolérance de Levenshtein avec fastest-levenshtein
     if (distance(normKeyword, word) <= allowedDistance) {
       return true;
     }
 
-    // Cas spécial pour les pluriels des très petits mots
+    // Plurals of words too short for the Levenshtein tolerance above.
     if (normKeyword.length <= 3) {
       if (word === normKeyword + 's' || word === normKeyword + 'x') {
         return true;
       }
     }
 
-    // Détection des préfixes pour les mots longs
     if (normKeyword.length >= 4) {
       if (
         (word.startsWith(normKeyword) || normKeyword.startsWith(word)) &&
@@ -85,7 +79,7 @@ export const isKeywordInText = (keyword: string, text: string): boolean => {
 export const parseIngredientLine = (line: string): Ingredient => {
   const cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
   const stopWords = new Set([
-    // Articles & Prépositions
+    // Articles and prepositions
     'de',
     'd',
     'du',
@@ -104,7 +98,7 @@ export const parseIngredientLine = (line: string): Ingredient => {
     'pour',
     'avec',
     'sans',
-    // Unités courtes
+    // Short units
     'g',
     'kg',
     'mg',
@@ -117,7 +111,7 @@ export const parseIngredientLine = (line: string): Ingredient => {
     'cc',
     'cas',
     'cac',
-    // Unités longues
+    // Long units
     'gramme',
     'grammes',
     'kilo',
@@ -162,7 +156,7 @@ export const parseIngredientLine = (line: string): Ingredient => {
     'bottes',
     'cafe',
     'soupe',
-    // Adjectifs & Modificateurs courants
+    // Common adjectives and modifiers
     'facultatif',
     'optionnel',
     'environ',
@@ -219,7 +213,6 @@ export const extractStepParams = (text: string): StepParams => {
     return { time, temp, speed, seconds, reverse };
   }
 
-  // 1. Détection du temps
   const timeMatch = text.match(/(\d+)\s*(sec|min|mn|h)/i);
 
   if (timeMatch) {
@@ -238,7 +231,6 @@ export const extractStepParams = (text: string): StepParams => {
     }
   }
 
-  // 2. Détection de la température
   const tempMatch = text.match(/(\d+)\s*°|varoma/i);
 
   if (tempMatch) {
@@ -249,7 +241,6 @@ export const extractStepParams = (text: string): StepParams => {
     }
   }
 
-  // 3. Détection de la vitesse et du mode mijotage
   const lowerText = text.toLowerCase();
 
   if (lowerText.match(/pétrin|pétrir|épi/)) {
@@ -257,7 +248,6 @@ export const extractStepParams = (text: string): StepParams => {
   } else if (lowerText.match(/turbo/)) {
     speed = 'TURBO';
   } else {
-    // Recherche par mot clé
     const speedMatch = text.match(
       /(vit|vitesse)\.?\s*(\d+(\.\d+)?(\-\d+)?)|mijotage|🥄/i,
     );
@@ -267,19 +257,18 @@ export const extractStepParams = (text: string): StepParams => {
         ? 'MIJOT'
         : speedMatch[2];
     } else {
-      // Recherche de vitesse numérique après un slash (ex: /5 ou //3.5)
+      // Speed written after a slash, e.g. /5 or //3.5.
       const slashSpeedMatch = text.match(/\/\/?(\d+(\.\d+)?)/);
 
       if (slashSpeedMatch) {
         speed = slashSpeedMatch[1];
       } else if (text.includes('//')) {
-        // S'il y a // mais rien après, c'est le mode mijotage par défaut
+        // A bare // means simmer speed.
         speed = 'MIJOT';
       }
     }
   }
 
-  // 4. Détection du sens inverse
   if (
     (text.includes('//') || lowerText.match(/sens inverse|inversé|inverse|⏪/)) &&
     speed !== 'EPI'
@@ -298,7 +287,7 @@ export const EMPTY_STEP_PARAMS: StepParams = {
   reverse: false,
 };
 
-/** Durée en secondes → affichage du cadran ("00:45", "05:00", "1:00:00"). */
+/** Seconds to dial display ("00:45", "05:00", "1:00:00"). */
 const formatStepTime = (seconds: number): string => {
   if (seconds <= 0) {
     return EMPTY_STEP_PARAMS.time;
@@ -315,7 +304,7 @@ const formatStepTime = (seconds: number): string => {
   return `${Math.floor(seconds / 3600)}:00:00`;
 };
 
-/** Vitesses nommées du robot → code affiché sur le cadran. */
+/** Named speeds to the code shown on the dial. */
 const NAMED_SPEEDS: Record<string, string> = {
   mijotage: 'MIJOT',
   petrin: 'EPI',
@@ -324,13 +313,9 @@ const NAMED_SPEEDS: Record<string, string> = {
 };
 
 /**
- * Réglages déclarés (schéma 2) → valeurs d'affichage.
- *
- * Aucune lecture du texte de l'étape ici : ce que le modèle n'a pas déclaré
- * n'existe pas.
- *
- * Accepte aussi un `StepParams` déjà résolu (`temp` au lieu de `temperature`),
- * pour qu'une recette relue depuis Firestore repasse par ici sans se dégrader.
+ * Declared settings (schema 2) to display values. Never reads the step text.
+ * Also accepts an already-resolved `StepParams` (`temp` rather than
+ * `temperature`) so a recipe re-read from Firestore survives a second pass.
  */
 export const resolveStepSettings = (value: unknown): StepParams => {
   const declared = (value || {}) as StepSettings & { temp?: string };
@@ -351,8 +336,7 @@ export const resolveStepSettings = (value: unknown): StepParams => {
 
   const rawSpeed = (declared.speed || '').trim();
   const normalizedSpeed = normalizeText(rawSpeed);
-  // "aucune" est la façon dont le modèle dit « le robot ne tourne pas » : le
-  // champ est obligatoire, il faut bien qu'il puisse répondre ça.
+  // "aucune" is how the model says the blades do not turn; speed is required.
   const speed =
     !rawSpeed || normalizedSpeed === 'aucune'
       ? EMPTY_STEP_PARAMS.speed
@@ -360,16 +344,16 @@ export const resolveStepSettings = (value: unknown): StepParams => {
 
   return {
     time: formatStepTime(seconds),
-    // Une température vide mais mal formée ("°C" seul) ne vaut rien.
+    // A malformed temperature (bare "°C") is worth nothing.
     temp: temp === '°C' ? EMPTY_STEP_PARAMS.temp : temp,
     speed,
     seconds,
-    // Le pétrin n'a pas de sens inverse, comme dans l'extraction texte.
+    // Kneading has no reverse, same rule as the text extraction.
     reverse: declared.reverse === true && speed !== 'EPI',
   };
 };
 
-/** Une étape sans minuteur, sans température, sans vitesse : rien à afficher. */
+/** No timer, no temperature, no speed: nothing worth attaching. */
 const hasStepParams = (params: StepParams): boolean =>
   params.seconds > 0 ||
   params.temp !== EMPTY_STEP_PARAMS.temp ||
@@ -377,15 +361,10 @@ const hasStepParams = (params: StepParams): boolean =>
   params.reverse;
 
 /**
- * Repère les accessoires mentionnés dans une étape, pour afficher un visuel
- * dédié pendant la cuisson.
+ * Guesses the accessories a step needs. Reserved for text-only recipes (Mealie,
+ * manual paste) — generated ones declare theirs in the JSON.
  *
- * Heuristique réservée aux recettes qui n'arrivent que sous forme de texte
- * (Mealie, copier-coller manuel) : les recettes générées déclarent leurs
- * accessoires dans le JSON, sans passer par ces motifs.
- *
- * `temp` (issue d'`extractStepParams`) permet d'attraper le Varoma quand il
- * n'apparaît que comme température, sans être nommé dans la phrase.
+ * `temp` catches the Varoma when it appears only as a temperature.
  */
 export const detectStepAccessories = (
   text: string,
@@ -409,7 +388,7 @@ export const detectStepAccessories = (
 
       accessories.push({ id: item.id, cutterMode: mode?.id });
     } else if (item.id === GOBELET_ID) {
-      // Le motif du gobelet ne matche que son retrait (cf. catalogue).
+      // The catalogue pattern only matches its removal.
       accessories.push({ id: item.id, state: 'removed' });
     } else {
       accessories.push({ id: item.id });
@@ -419,11 +398,7 @@ export const detectStepAccessories = (
   return accessories;
 };
 
-/**
- * Ne garde que les accessoires connus du catalogue, sans doublon. Un id inventé
- * par le modèle, ou un mode de coupe sur autre chose que le Découpe-minute, est
- * écarté plutôt que propagé jusqu'à l'UI.
- */
+/** Keeps only catalogue accessories, deduplicated; invented ids are dropped. */
 export const sanitizeStepAccessories = (value: unknown): StepAccessory[] => {
   if (!Array.isArray(value)) {
     return [];
@@ -444,8 +419,7 @@ export const sanitizeStepAccessories = (value: unknown): StepAccessory[] => {
       continue;
     }
 
-    // Le gobelet est en place par défaut : une étape qui le « demande » sans
-    // préciser son retrait n'apprend rien, on l'écarte.
+    // The cup sits on the lid by default: only its removal is information.
     if (id === GOBELET_ID) {
       if ((raw as StepAccessory)?.state !== 'removed') {
         continue;
@@ -470,36 +444,27 @@ export const sanitizeStepAccessories = (value: unknown): StepAccessory[] => {
 };
 
 /**
- * Version courante du schéma de recette.
- *
- * 1 (ou absent) — étapes en texte brut : accessoires et ingrédients sont
- *   déduits du texte par heuristique. C'est la forme des recettes
- *   sauvegardées avant la sortie structurée, et la seule possible pour Mealie
- *   et le copier-coller manuel.
- * 2 — étapes structurées : l'étape déclare ses accessoires et ses ingrédients,
- *   on lui fait confiance et aucune heuristique ne tourne.
+ * 1 (or absent) — plain-text steps, everything inferred by heuristics.
+ * 2 — the step declares its settings, accessories and ingredients; no heuristic
+ *     runs and the declaration is trusted.
  */
 export const RECIPE_SCHEMA_VERSION = 2;
 
-/** Une version absente vaut 1 : les recettes d'avant le schéma structuré. */
+/** An absent version means 1: recipes predating the structured schema. */
 export const isStructuredSchema = (schemaVersion?: unknown): boolean =>
   typeof schemaVersion === 'number' && schemaVersion >= 2;
 
 /**
- * En mode structuré, `ingredients` est obligatoire : les étapes référencent les
- * ingrédients par leur libellé, et sans la liste pour les résoudre ils seraient
- * silencieusement perdus. Le typage force l'appelant à la fournir.
+ * `ingredients` is required in structured mode: steps reference ingredients by
+ * label, and without the list to resolve against they would be silently lost.
  */
 export type NormalizeStepsOptions =
   | { structured: true; ingredients: Ingredient[] }
   | { structured?: false; ingredients?: Ingredient[] };
 
 /**
- * Ramène des étapes de provenance quelconque au type `RecipeStep`.
- *
- * En mode structuré les déclarations du modèle font foi ; sinon accessoires et
- * ingrédients sont déduits du texte. Les `string[]` restent acceptés : c'est la
- * forme des recettes en schéma 1 et celle du parsing texte.
+ * Normalises steps of any provenance. `string[]` stays accepted: that is the
+ * schema-1 shape and what the text parser produces.
  */
 export const normalizeSteps = (
   value: unknown,
@@ -527,8 +492,7 @@ export const normalizeSteps = (
         return buildTextStep(rawText, ingredients);
       }
 
-      // Schéma 2 : aucune heuristique. Ce que le modèle n'a pas déclaré est
-      // simplement absent — on n'ira pas le chercher dans la prose.
+      // Schema 2: what the model did not declare is simply absent.
       return withOptionalFields(cleanStepText(rawText), {
         accessories: sanitizeStepAccessories((raw as RecipeStep).accessories),
         ingredients: resolveDeclaredIngredients(
@@ -545,12 +509,9 @@ export const normalizeSteps = (
 };
 
 /**
- * Résout les ingrédients déclarés par une étape contre ceux de la recette, par
- * égalité normalisée (casse, accents, espaces).
- *
- * Un libellé qui ne correspond à rien est écarté : mieux vaut ne rien afficher
- * qu'un ingrédient inventé. Le même ingrédient peut être réclamé par plusieurs
- * étapes — c'est une référence, pas une consommation.
+ * Resolves declared labels against the recipe's ingredients by normalised
+ * equality. An unmatched label is dropped rather than invented, and the same
+ * ingredient may be claimed by several steps — it is a reference, not a spend.
  */
 const resolveDeclaredIngredients = (
   declared: unknown,
@@ -580,7 +541,7 @@ const resolveDeclaredIngredients = (
   return resolved;
 };
 
-/** Ingrédients de la recette mentionnés dans le texte de l'étape (schéma 1). */
+/** Recipe ingredients mentioned in the step text (schema 1). */
 const matchIngredientsInText = (
   text: string,
   ingredients: Ingredient[],
@@ -593,7 +554,7 @@ const matchIngredientsInText = (
     )
     .map(ing => ing.fullText);
 
-/** N'ajoute les champs optionnels au `RecipeStep` que s'ils portent quelque chose. */
+/** Adds optional fields only when they carry something. */
 const withOptionalFields = (
   text: string,
   fields: {
@@ -608,10 +569,7 @@ const withOptionalFields = (
   ...(hasStepParams(fields.params) ? { params: fields.params } : {}),
 });
 
-/**
- * Étape issue de texte libre : réglages, accessoires et ingrédients sont
- * extraits du texte, faute d'être déclarés.
- */
+/** Free-text step: settings, accessories and ingredients are inferred. */
 const buildTextStep = (raw: string, ingredients: Ingredient[]): RecipeStep => {
   const text = cleanStepText(raw);
   const params = extractStepParams(text);
@@ -623,7 +581,6 @@ const buildTextStep = (raw: string, ingredients: Ingredient[]): RecipeStep => {
   });
 };
 
-// Fonction utilitaire pour nettoyer le texte des étapes (gestion des //)
 export const cleanStepText = (line: string): string => {
   return corrigerInstructionsThermomix(line);
 };
@@ -631,15 +588,10 @@ export const cleanStepText = (line: string): string => {
 function corrigerInstructionsThermomix(texte: string): string {
   if (!texte) {return "";}
 
-  // Cas 1 : Remplacement de //vitesse par "sens inverse / vitesse"
-  // On utilise le flag 'g' pour remplacer toutes les occurrences
   let texteCorrige = texte.replace(/\/\/vitesse\s*([\d.]+)/g, " /⏪/vitesse $1");
 
-  // Cas 2 : Remplacement de // seul (souvent en fin de phrase ou après la température)
-  // On utilise un lookahead négatif (?!...) pour vérifier que ce n'est pas suivi de "vitesse"
   texteCorrige = texteCorrige.replace(/\/\/(?!\s*vitesse)/g, " /⏪/🥄");
 
-  // Nettoyage des doubles espaces potentiels et espaces en début/fin
   return texteCorrige.replace(/\s\s+/g, ' ').trim();
 }
 
@@ -657,9 +609,9 @@ export const parseRecipe = (
   metadata?: RecipeMetadata,
 ): Recipe => {
   try {
-    // Un bloc ```json entoure parfois la réponse d'un modèle : on le retire
-    // plutôt que de retomber sur le parsing texte, qui prendrait la clôture du
-    // fence pour un titre et chaque ligne de JSON pour une étape.
+    // A model sometimes wraps its answer in a ```json fence; strip it rather
+    // than fall through to the text parser, which would read the fence as a
+    // title and every JSON line as a step.
     const trimmedInput = input
       .trim()
       .replace(/^```(?:json)?\s*/i, '')
@@ -693,8 +645,7 @@ export const parseRecipe = (
     console.log('Input is not valid JSON, falling back to text parsing.');
   }
 
-  // 2. PARSING TEXTE CLASSIQUE (Fallback)
-  // On ignore les lignes d'images type Markdown ![alt](url)
+  // Skip Markdown image lines.
   const imageRegex = /!\[.*\]\(.*\)/;
 
   const lines = input
@@ -717,7 +668,7 @@ export const parseRecipe = (
   const addIngredient = (line: string) =>
     ingredients.push(parseIngredientLine(line));
 
-  // Small recipes with less than 5 lines are treated as steps
+  // Under 5 lines, everything is a step.
   if (lines.length < 5) {
     steps = lines.map(l => cleanStepText(l));
   } else {

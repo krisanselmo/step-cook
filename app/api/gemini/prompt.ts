@@ -1,15 +1,7 @@
 import { buildEquipmentPromptBlock } from '@/app/lib/equipment';
 import { ACCESSORIES_FIELD_INSTRUCTIONS } from '@/app/api/gemini/recipeSchema';
 
-/**
- * Pré-prompt de génération de recette.
- *
- * Le bloc « matériel » est construit à partir de la configuration de
- * l'utilisateur : l'IA ne doit proposer que des étapes réalisables avec les
- * accessoires qu'il possède réellement.
- *
- * `ownedEquipment` absent → configuration par défaut (matériel fourni d'origine).
- */
+/** Absent `ownedEquipment` falls back to the default configuration. */
 export const buildPrompt = (ownedEquipment?: unknown): string =>
   `Agis comme un assistant culinaire expert. Je vais te fournir une liste d'ingrédient, des idées ou une recette et tu dois adapter la recette pour utiliser le thermomix. la convertir strictement au format JSON pour mon application de cuisine.
 

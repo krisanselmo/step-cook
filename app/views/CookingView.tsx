@@ -342,8 +342,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
 
             {/* Étapes */}
             {recipe.steps.length > 0 && (
-              // Ouvert d'emblée : l'aperçu tient désormais en haut de page, et
-              // la place restante vaut mieux remplie par les étapes.
+              // Open by default: the overview now fits above the fold.
               <details
                 open
                 className={`${theme.properties.radius} border overflow-hidden ${t('border-gray-700/50', 'border-gray-200')}`}
@@ -719,7 +718,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
   );
 };
 
-/** Durée de l'aperçu (prépa, cuisson, total). Rien à afficher sans valeur. */
+/** Renders nothing without a value. */
 const TimePill: React.FC<{
   icon: React.ElementType;
   iconClass: string;
@@ -747,10 +746,7 @@ const TimePill: React.FC<{
   );
 };
 
-/**
- * Pastilles d'accessoires affichées sous chaque étape dans l'aperçu de la
- * recette, pour repérer d'un coup d'œil celles qui demandent du matériel.
- */
+/** Marks, in the overview, the steps that need equipment. */
 const StepAccessoryTags: React.FC<{
   accessories?: StepAccessory[];
   theme: ThemePlugin;
@@ -785,7 +781,6 @@ const StepAccessoryTags: React.FC<{
   );
 };
 
-// --- Chat Panel Component ---
 import { ChatMessage, RecipeProposal, ThemePlugin } from '@/app/lib/types';
 
 interface ChatPanelProps {
@@ -923,7 +918,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 };
 
 
-// --- Carte de proposition (validation humaine avant application) ---
+// Proposal card: human validation before anything is applied.
 interface ProposalCardProps {
   proposal: RecipeProposal;
   onApply: () => void;

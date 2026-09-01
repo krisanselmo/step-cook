@@ -8,7 +8,7 @@ import {
   parseIngredientLine,
 } from '@/app/lib/utils';
 
-/** Ne garde que les chaînes non vides d'un tableau potentiellement hétérogène. */
+/** Non-empty strings only, from a possibly heterogeneous array. */
 const toCleanStringArray = (value: unknown): string[] =>
   Array.isArray(value)
     ? value.filter(
@@ -62,8 +62,7 @@ export async function POST(req: NextRequest) {
       ingredients: ingredientLines.map(parseIngredientLine),
     });
 
-    // La sortie structurée garantit la forme, pas le contenu : une recette sans
-    // titre ni étape est un échec, pas quelque chose à afficher.
+    // Structured output guarantees the shape, not the content.
     if (typeof parsed.title !== 'string' || !parsed.title.trim() || steps.length === 0) {
       return NextResponse.json(
         { error: 'Gemini a renvoyé une recette inexploitable.' },

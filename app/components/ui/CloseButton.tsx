@@ -3,7 +3,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-/** Bouton de fermeture des panneaux (matériel, assistant). */
+/** Shared by the equipment and assistant panels. */
 export const CloseButton: React.FC<{
   onClose: () => void;
   t: (dark: string, light: string) => string;

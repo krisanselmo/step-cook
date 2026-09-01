@@ -5,7 +5,7 @@ export interface Ingredient {
   keywords: string[];
 }
 
-/** Réglages d'une étape, prêts pour l'affichage (cadrans + minuteur). */
+/** Step settings, ready to display (dials + timer). */
 export interface StepParams {
   time: string;
   temp: string;
@@ -14,25 +14,20 @@ export interface StepParams {
   reverse: boolean;
 }
 
-/**
- * Réglages bruts tels que déclarés par le modèle (schéma 2). Les valeurs
- * d'affichage de `StepParams` en sont dérivées, jamais l'inverse.
- */
+/** Raw settings as declared by the model (schema 2). `StepParams` derives from these. */
 export interface StepSettings {
-  /** Durée totale en secondes. Absent ou 0 = pas de minuteur. */
+  /** Absent or 0 means no timer. */
   seconds?: number;
-  /** Température en °C ("100") ou "Varoma". */
+  /** Degrees ("100") or "Varoma". */
   temperature?: string;
-  /** "0.5" à "10", ou "mijotage" / "petrin" / "turbo". */
+  /** "0.5" to "10", or "mijotage" / "petrin" / "turbo". */
   speed?: string;
   reverse?: boolean;
 }
 
 /**
- * Accessoire réclamé par une étape.
- *
- * `cutterMode` n'a de sens que pour le Découpe-minute, `state` que pour le
- * gobelet doseur — en place par défaut, seul son retrait vaut d'être signalé.
+ * `cutterMode` only applies to the Découpe-minute, `state` only to the
+ * measuring cup — on the lid by default, so only its removal is reported.
  */
 export interface StepAccessory {
   id: string;
@@ -41,22 +36,17 @@ export interface StepAccessory {
 }
 
 /**
- * Une étape de recette.
+ * Every optional field is filled at the source — declared by the model, or
+ * inferred from the text for schema 1. See `RECIPE_SCHEMA_VERSION`.
  *
- * `accessories` et `ingredients` sont renseignés à la source : déclarés par le
- * modèle pour les recettes générées (schéma JSON structuré), déduits du texte
- * pour celles qui n'arrivent que sous cette forme (Mealie, copier-coller
- * manuel). Voir `RECIPE_SCHEMA_VERSION`.
- *
- * `ingredients` contient les `fullText` des ingrédients de la recette utilisés
- * par l'étape, déjà résolus contre `Recipe.ingredients` : l'UI n'a plus qu'à
- * les lire.
+ * `ingredients` holds `fullText` values already resolved against
+ * `Recipe.ingredients`, so the UI only reads them.
  */
 export interface RecipeStep {
   text: string;
   accessories?: StepAccessory[];
   ingredients?: string[];
-  /** Réglages résolus (déclarés en schéma 2, extraits du texte en schéma 1). */
+  /** Resolved settings (declared in schema 2, inferred in schema 1). */
   params?: StepParams;
 }
 
@@ -71,7 +61,7 @@ export interface Recipe {
   slug?: string;
   orgURL?: string;
   firestoreId?: string;
-  /** Absent = 1 (étapes en texte brut). Voir `RECIPE_SCHEMA_VERSION`. */
+  /** Absent means 1. See `RECIPE_SCHEMA_VERSION`. */
   schemaVersion?: number;
 }
 
@@ -83,16 +73,12 @@ export interface SavedRecipeSummary {
 }
 
 /**
- * Statut d'une proposition de modification soumise à l'utilisateur.
- * - `pending`  : en attente de décision
- * - `applied`  : acceptée, la recette courante a été remplacée
- * - `rejected` : refusée
- * - `stale`    : caduque, la recette a changé depuis (une autre proposition a été
- *                appliquée), l'appliquer écraserait ces modifications
+ * `stale` means another proposal was applied since: applying this one would
+ * overwrite that change.
  */
 export type ProposalStatus = 'pending' | 'applied' | 'rejected' | 'stale';
 
-/** Modification proposée par l'agent, appliquée uniquement après validation. */
+/** Applied only after the user validates it. */
 export interface RecipeProposal {
   recipe: Recipe;
   changes: string[];
@@ -104,7 +90,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   proposal?: RecipeProposal;
-  /** Message d'erreur (échec de l'appel à l'agent) plutôt que réponse de l'agent. */
+  /** An error message rather than an agent reply. */
   isError?: boolean;
 }
 
@@ -160,15 +146,12 @@ export interface ThemePlugin {
     borderAccent: string;
     shadowAccent: string;
 
-    // Checkbox states
     checkedBgDark: string;
     checkedBgLight: string;
 
-    // App Backgrounds
     rootBgDark: string;
     rootBgLight: string;
 
-    // Cards
     cardBgDark: string;
     cardBgLight: string;
   };

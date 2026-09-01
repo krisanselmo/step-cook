@@ -25,7 +25,6 @@ import {EquipmentModal} from '@/app/components/ui/EquipmentModal';
 import {SortOption, useCookingState} from '@/app/hooks/useCookingState';
 import {SavedRecipeSummary, MealieRecipeSummary, ThemePlugin} from '@/app/lib/types';
 
-// --- Unified recipe list item ---
 interface RecipeItem {
   id: string;
   name: string;
@@ -93,7 +92,6 @@ function filterAndSort(
   return result;
 }
 
-// --- Recipe card ---
 interface RecipeCardProps {
   item: RecipeItem;
   onLoad: () => void;
@@ -152,7 +150,6 @@ const RecipeCard: React.FC<RecipeCardProps> = ({item, onLoad, onDelete, theme, t
   );
 };
 
-// --- Main InputView ---
 interface InputViewProps {
   rawText: string;
   setRawText: (text: string) => void;
@@ -189,7 +186,7 @@ interface InputViewProps {
   >['setEquipmentModalOpen'];
 }
 
-// Classes littérales : Tailwind ne détecte pas les noms construits à l'exécution.
+// Literal classes: Tailwind cannot see names built at runtime.
 const GRID_COLS: Record<number, string> = {
   1: 'md:grid-cols-1',
   2: 'md:grid-cols-2',
@@ -239,8 +236,8 @@ export const InputView: React.FC<InputViewProps> = ({
 
   const isLoading = isMealieLoading || isSavedLoading;
 
-  // Une source en panne ne doit pas masquer l'autre : on liste les erreurs pour
-  // les afficher en bandeau, au-dessus des recettes qui ont bien été chargées.
+  // One broken source must not hide the other: errors go to a banner above
+  // whatever did load.
   const sourceErrors = useMemo(
     () => [
       { key: 'mealie' as const, label: 'Mealie', message: isMealieConfigured ? mealieError : null },
@@ -249,10 +246,10 @@ export const InputView: React.FC<InputViewProps> = ({
     [mealieError, savedError, isMealieConfigured, isFirestoreConfigured],
   );
 
-  // Filtrer par source n'a de sens que si les deux sources existent.
+  // Filtering by source only makes sense when both exist.
   const showSourceFilters = isMealieConfigured && isFirestoreConfigured;
   const showRecipesColumn = isMealieConfigured || isFirestoreConfigured;
-  // Le mode manuel est la seule colonne toujours disponible.
+  // Manual is the only column always available.
   const columnCount = 1 + (showRecipesColumn ? 1 : 0) + (isGeminiConfigured ? 1 : 0);
 
   const allRecipes = useMemo(

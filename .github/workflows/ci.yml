@@ -6,10 +6,9 @@ on:
   pull_request:
 
 jobs:
-  # Le bump est une étape de ce job plutôt qu'un job séparé : un statut
-  # « skipped » se propage le long de la chaîne `needs`, et un job de version
-  # ignoré hors PR entraînait `docker` avec lui — c'est ce qui a privé la 0.2.0
-  # de publication. Un seul job, aucune chaîne, aucun `always()` à maintenir.
+  # The bump is a step here rather than its own job: a skipped status
+  # propagates along `needs`, and a version job skipped outside PRs dragged
+  # `docker` down with it.
   ci:
     runs-on: ubuntu-latest
     permissions:
@@ -17,15 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Sur une PR : la branche elle-même, pour pouvoir y pousser le bump et
-          # vérifier l'arbre réellement mergé. L'historique complet sert au
-          # calcul de version (tags + commits depuis la dernière release).
+          # On a PR, the branch itself: the bump is pushed to it and the tree
+          # actually merged is the one verified. Full history feeds the version.
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
           fetch-depth: 0
 
-      # Le tag de l'image vient de package.json : sans incrément, un merge
-      # réécrit silencieusement une version déjà publiée. Le bump se fait sur la
-      # branche de PR — main est protégée et refuserait un commit direct.
       - name: Compute next version
         if: github.event_name == 'pull_request'
         id: next
@@ -58,7 +53,7 @@ jobs:
       - name: Build
         run: npm run build
 
-  # Image multi-arch (amd64 + arm64) poussée sur Docker Hub, même tags que build.sh
+  # Multi-arch image (amd64 + arm64) on Docker Hub, same tags as build.sh
   docker:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: ci
@@ -96,8 +91,8 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # `sha-<court>` est immuable : même si un tag de version était réécrit un
-      # jour, l'image resterait atteignable par son commit d'origine.
+      # `sha-` is immutable: should a version tag ever be rewritten, the image
+      # stays reachable by its commit.
       - name: Build and push
         uses: docker/build-push-action@v7
         with:

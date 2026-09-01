@@ -154,8 +154,7 @@ describe('normalizeSteps — schéma 2 (structuré)', () => {
       structured,
     );
 
-    // Le texte contient pourtant « Varoma », « farine » et « 20 min » : en
-    // schéma 2 aucun regex ne tourne, l'étape reste nue.
+    // The text does say Varoma, farine and 20 min: in schema 2 no regex runs.
     expect(step.text).toBe('Cuire la farine 20 min / Varoma / vitesse 1.');
     expect(step.accessories).toBeUndefined();
     expect(step.ingredients).toBeUndefined();
@@ -279,7 +278,7 @@ describe('réglages du robot', () => {
       [{ text: 'Cuire.', settings: { seconds: 900, temperature: 'Varoma', speed: '1', reverse: true } }],
       structured,
     );
-    // Relecture : l'étape porte désormais `params`, pas `settings`.
+    // On re-read the step carries `params`, not `settings`.
     const [reread] = normalizeSteps([step], structured);
 
     expect(reread.params).toEqual(step.params);
@@ -306,8 +305,8 @@ describe('vitesse « aucune »', () => {
       ingredients: [],
     })[0]?.params;
 
-  // Le schéma rend "speed" obligatoire : le modèle doit pouvoir dire
-  // « le robot ne tourne pas » sans inventer une vitesse.
+  // "speed" is required by the schema, so the model needs a way to say the
+  // blades do not turn without inventing a value.
   it('vaut une absence de vitesse, pas une vitesse nommée', () => {
     expect(paramsOf({ seconds: 600, speed: 'aucune' })).toMatchObject({
       time: '10:00',
@@ -321,8 +320,8 @@ describe('vitesse « aucune »', () => {
 });
 
 describe('re-normalisation côté client (réponse de route → état de l\'app)', () => {
-  // La route résout déjà les ingrédients ; le client re-normalise la réponse.
-  // Sans lui repasser la liste, cette seconde passe les effaçait en silence.
+  // The route already resolved these; without passing the list back, the
+  // client's second pass erased them silently.
   const routeResponse = {
     ingredients: ['200 g de comté', '4 carottes'],
     steps: [

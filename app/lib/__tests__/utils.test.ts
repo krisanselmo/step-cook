@@ -162,7 +162,7 @@ Préparation:
 1. Étape avec //2
 2. Étape avec //`;
     const result = parseRecipe(input);
-    // La notation `//` est désormais normalisée en emojis lisibles (sens inverse).
+    // The `//` notation is normalised into readable emoji.
     expect(result.steps[0].text).toBe('1. Étape avec /⏪/🥄2');
     expect(result.steps[1].text).toBe('2. Étape avec /⏪/🥄');
   });

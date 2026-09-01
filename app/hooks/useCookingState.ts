@@ -29,8 +29,7 @@ import {
 export type ViewState = 'input' | 'processing' | 'cooking';
 export type SortOption = 'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc';
 
-// Identifiant local d'un message de chat : sert de clé de rendu et d'ancre pour
-// accepter/refuser une proposition (l'index bougerait au fil de la conversation).
+// Anchors accept/reject to a message: an index would shift as the chat grows.
 let messageIdCounter = 0;
 const createMessageId = (): string => `msg-${++messageIdCounter}`;
 
@@ -122,16 +121,14 @@ export const useCookingState = (): UseCookingState => {
   const [currentTime, setCurrentTime] = useState<string>('12:00');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
 
-  // Plugin / Theme State
   const [activeThemeId, setActiveThemeId] = useState<string>('default');
   const theme = useMemo(
     () => THEMES.find(t => t.id === activeThemeId) || defaultTheme,
     [activeThemeId],
   );
 
-  // Restaure le thème choisi depuis le localStorage après le montage.
-  // (Lecture après montage plutôt qu'à l'init du state pour éviter un décalage
-  // d'hydratation SSR : serveur et client rendent 'default' en premier.)
+  // Read after mount, not at state init: server and client must both render
+  // 'default' first or hydration mismatches.
   useEffect(() => {
     const stored = localStorage.getItem('activeThemeId');
 
@@ -140,8 +137,6 @@ export const useCookingState = (): UseCookingState => {
     }
   }, []);
 
-  // Persiste le thème à chaque changement, en sautant le tout premier rendu pour
-  // ne pas écraser la valeur stockée avant de l'avoir restaurée ci-dessus.
   const themeHydrated = useRef(false);
   useEffect(() => {
     if (!themeHydrated.current) {
@@ -152,8 +147,6 @@ export const useCookingState = (): UseCookingState => {
     localStorage.setItem('activeThemeId', activeThemeId);
   }, [activeThemeId]);
 
-  // Restaure le mode sombre/clair depuis le localStorage après le montage
-  // (même logique que le thème : lecture post-montage pour éviter le mismatch SSR).
   useEffect(() => {
     const stored = localStorage.getItem('isDarkMode');
 
@@ -162,7 +155,6 @@ export const useCookingState = (): UseCookingState => {
     }
   }, []);
 
-  // Persiste le mode sombre/clair à chaque changement (en sautant le premier rendu).
   const darkModeHydrated = useRef(false);
   useEffect(() => {
     if (!darkModeHydrated.current) {
@@ -173,17 +165,15 @@ export const useCookingState = (): UseCookingState => {
     localStorage.setItem('isDarkMode', String(isDarkMode));
   }, [isDarkMode]);
 
-  // Matériel possédé (Varoma, Découpe-minute…) : configuration locale à l'appareil,
-  // envoyée à l'IA pour qu'elle ne propose que des étapes réalisables.
+  // Device-local config, sent to the AI so it only proposes feasible steps.
   const [ownedEquipment, setOwnedEquipment] = useState<string[]>(
     DEFAULT_EQUIPMENT_IDS,
   );
   const [equipmentModalOpen, setEquipmentModalOpen] = useState<boolean>(false);
-  // Passe à true une fois le localStorage lu : le deep link `?prompt=` attend ce
-  // signal pour ne pas générer une recette avec la configuration par défaut.
+  // The `?prompt=` deep link waits for this, or it would generate with the
+  // default equipment rather than the user's.
   const [isEquipmentReady, setIsEquipmentReady] = useState<boolean>(false);
 
-  // Restauration post-montage, comme le thème (évite le mismatch d'hydratation).
   useEffect(() => {
     const stored = localStorage.getItem('ownedEquipment');
 
@@ -191,7 +181,7 @@ export const useCookingState = (): UseCookingState => {
       try {
         setOwnedEquipment(sanitizeEquipmentIds(JSON.parse(stored)));
       } catch {
-        // Valeur corrompue : on garde la configuration par défaut.
+        // Corrupted value: keep the defaults.
         console.warn('[Équipement] configuration illisible, valeurs par défaut');
       }
     }
@@ -199,7 +189,6 @@ export const useCookingState = (): UseCookingState => {
     setIsEquipmentReady(true);
   }, []);
 
-  // Persistance (en sautant le premier rendu, avant la restauration ci-dessus).
   const equipmentHydrated = useRef(false);
   useEffect(() => {
     if (!equipmentHydrated.current) {
@@ -219,7 +208,7 @@ export const useCookingState = (): UseCookingState => {
   const [mealieRecipes, setMealieRecipes] = useState<MealieRecipeSummary[]>([]);
   const [isMealieLoading, setIsMealieLoading] = useState<boolean>(false);
   const [mealieError, setMealieError] = useState<string | null>(null);
-  // Mealie non configuré (pas de MEALIE_BASE_URL) : on le masque au lieu de l'annoncer en panne.
+  // Unconfigured Mealie is hidden rather than reported as broken.
   const [isMealieConfigured, setIsMealieConfigured] = useState<boolean>(true);
   const [isFirestoreConfigured, setIsFirestoreConfigured] = useState<boolean>(true);
   const [isGeminiConfigured, setIsGeminiConfigured] = useState<boolean>(true);
@@ -231,15 +220,13 @@ export const useCookingState = (): UseCookingState => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortOption, setSortOption] = useState<SortOption>('date-desc');
 
-  // Chat IA
   const [chatOpen, setChatOpen] = useState<boolean>(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
-  // Propositions appliquées mais pas encore persistées dans Firestore.
+  // Applied proposals not yet persisted to Firestore.
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [isSavingChatRecipe, setIsSavingChatRecipe] = useState<boolean>(false);
 
-  // Cooked Modal State
   const [cookedModalOpen, setCookedModalOpen] = useState<boolean>(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -266,7 +253,6 @@ export const useCookingState = (): UseCookingState => {
   const t = (darkClass: string, lightClass: string) =>
     isDarkMode ? darkClass : lightClass;
 
-  // Cleanup preview URL
   useEffect(() => {
     return () => {
       if (previewUrl) {
@@ -289,8 +275,7 @@ export const useCookingState = (): UseCookingState => {
       }
       const data = await res.json();
 
-      // Le proxy répond { configured: false } quand l'intégration n'est pas
-      // renseignée ; la liste des recettes, elle, est un tableau.
+      // The proxy answers { configured: false } when unset; a list otherwise.
       if (!Array.isArray(data) && data?.configured === false) {
         setIsMealieConfigured(false);
         setMealieRecipes([]);
@@ -301,8 +286,8 @@ export const useCookingState = (): UseCookingState => {
       setIsMealieConfigured(true);
       setMealieRecipes(data);
     } catch (err) {
-      // Panne d'une intégration externe, déjà rendue à l'écran : ce n'est pas un
-      // bug de l'app, donc pas de console.error (que l'overlay dev remonte en Issue).
+      // External outage, already surfaced on screen: not an app bug, so no
+      // console.error (the dev overlay would raise it as an Issue).
       setMealieError('Impossible de charger les recettes Mealie.');
       console.warn('[Mealie] liste indisponible :', err);
     } finally {
@@ -310,7 +295,7 @@ export const useCookingState = (): UseCookingState => {
     }
   }, []);
 
-  // Gemini n'a pas de liste à charger : on interroge sa configuration au montage.
+  // Gemini has no list to load; only its configuration is probed.
   const fetchGeminiConfig = useCallback(async () => {
     try {
       const res = await fetch('/api/gemini/config');
@@ -321,7 +306,7 @@ export const useCookingState = (): UseCookingState => {
       const data = await res.json();
       setIsGeminiConfigured(data?.configured !== false);
     } catch (err) {
-      // Injoignable : on laisse l'IA visible plutôt que de la masquer à tort.
+      // Unreachable: keep the AI visible rather than hide it wrongly.
       console.warn('[Gemini] configuration injoignable :', err);
     }
   }, []);
@@ -486,8 +471,7 @@ export const useCookingState = (): UseCookingState => {
   useEffect(() => {
     if (recipe && currentStep >= 0 && currentStep < recipe.steps.length) {
       const step = recipe.steps[currentStep];
-      // Réglages résolus au parsing : déclarés par le modèle en schéma 2,
-      // extraits du texte en schéma 1. Rien n'est relu ici.
+      // Resolved at parse time; nothing is re-read from the text here.
       const params = step.params ?? EMPTY_STEP_PARAMS;
 
       setStepParams(params);
@@ -500,9 +484,7 @@ export const useCookingState = (): UseCookingState => {
         setIsTimerRunning(false);
       }
 
-      // Les ingrédients de l'étape sont résolus en amont (déclarés par le
-      // modèle, ou déduits du texte pour les recettes en schéma 1) : ici on ne
-      // fait que retrouver les objets correspondants.
+      // Already resolved upstream; this only maps labels back to objects.
       const stepIngredientTexts = new Set(step.ingredients ?? []);
 
       setStepIngredients(
@@ -552,10 +534,8 @@ export const useCookingState = (): UseCookingState => {
     }, 800);
   };
 
-  // --- Agent conversationnel ---
-  // L'agent répond directement, ou propose une recette modifiée. Une proposition
-  // n'est jamais appliquée d'office : elle attend la validation de l'utilisateur
-  // (applyProposal / rejectProposal).
+  // A proposal is never applied on its own: it waits for applyProposal /
+  // rejectProposal.
   const sendChatMessage = async (message: string) => {
     if (!recipe || isChatLoading) {return;}
 
@@ -580,9 +560,7 @@ export const useCookingState = (): UseCookingState => {
 
       const data = await res.json();
 
-      // Une proposition porte la recette complète modifiée : on la prépare tout de
-      // suite (mots-clés des ingrédients, notation Thermomix) pour que « Appliquer »
-      // se réduise à un remplacement d'état.
+      // Prepared up front so that "Appliquer" is a plain state swap.
       const proposedIngredients =
         data.action === 'propose' && Array.isArray(data.recipe?.ingredients)
           ? data.recipe.ingredients.map((ing: string) => parseIngredientLine(ing))
@@ -641,7 +619,7 @@ export const useCookingState = (): UseCookingState => {
     }
   };
 
-  /** Accepte une proposition : elle devient la recette courante. */
+  /** Accepts a proposal: it becomes the current recipe. */
   const applyProposal = (messageId: string) => {
     const target = chatMessages.find(msg => msg.id === messageId);
 
@@ -654,8 +632,8 @@ export const useCookingState = (): UseCookingState => {
       prev.map(msg => {
         if (!msg.proposal || msg.proposal.status !== 'pending') {return msg;}
 
-        // Les autres propositions en attente ont été calculées sur l'ancienne
-        // recette : les appliquer ensuite écraserait celle qu'on vient d'accepter.
+        // Pending proposals were computed against the recipe just replaced;
+        // applying one afterwards would undo this acceptance.
         return {
           ...msg,
           proposal: {
@@ -667,7 +645,7 @@ export const useCookingState = (): UseCookingState => {
     );
   };
 
-  /** Refuse une proposition : la recette courante reste inchangée. */
+  /** Rejects a proposal: the current recipe is untouched. */
   const rejectProposal = (messageId: string) => {
     setChatMessages(prev =>
       prev.map(msg =>
@@ -696,8 +674,7 @@ export const useCookingState = (): UseCookingState => {
 
       setHasUnsavedChanges(false);
 
-      // La liste d'accueil vit dans le state : sans ça elle garderait l'ancien
-      // titre jusqu'au prochain rechargement complet de la page.
+      // The home list lives in state and would keep the stale title otherwise.
       setSavedRecipes(prev =>
         prev.map(saved =>
           saved.id === recipe.firestoreId
@@ -735,8 +712,7 @@ export const useCookingState = (): UseCookingState => {
         throw new Error(errorData.error || 'Erreur génération Gemini.');
       }
 
-      // La route renvoie une recette déjà structurée et validée (sortie JSON
-      // native de Gemini) : rien à parser ici.
+      // The route returns a validated structured recipe; nothing to parse.
       const { recipe: generated } = await res.json();
       const generatedIngredients = (generated.ingredients || []).map(
         (ing: string) => parseIngredientLine(ing),
@@ -762,7 +738,6 @@ export const useCookingState = (): UseCookingState => {
       setCurrentStep(-1);
       setView('cooking');
 
-      // Fire-and-forget save to Firestore
       fetch('/api/firestore/recipes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -784,11 +759,8 @@ export const useCookingState = (): UseCookingState => {
     }
   }, [fetchSavedRecipes, ownedEquipment]);
 
-  // Deep link for external tools: /?prompt=<text> auto-generates via Gemini.
-  // The URL is cleaned right away so a refresh (or a re-run of the effect)
-  // doesn't re-trigger a token-consuming generation.
-  // On attend la restauration du matériel : sinon la recette serait générée avec
-  // la configuration par défaut plutôt que celle de l'utilisateur.
+  // Deep link /?prompt=<text>. The URL is cleared at once so a refresh does not
+  // re-trigger a token-consuming generation. Waits for the equipment config.
   useEffect(() => {
     if (!isEquipmentReady) {
       return;
@@ -816,7 +788,6 @@ export const useCookingState = (): UseCookingState => {
     setCheckedIngredients(newChecked);
   };
 
-  // --- Handlers Upload Photo ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
 
@@ -841,7 +812,7 @@ export const useCookingState = (): UseCookingState => {
     formData.append('slug', recipe.slug);
 
     try {
-      // On appelle toujours l'API, c'est elle qui gérera si l'image est absente (retour succès immédiat)
+      // Always call the API; it handles a missing image on its own.
       const res = await fetch('/api/mealie/upload', {
         method: 'POST',
         body: formData,

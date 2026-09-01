@@ -2,10 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useCookingState } from '../useCookingState';
 import { Recipe } from '@/app/lib/types';
 
-/**
- * Ne pilote que la route visée ; toute autre requête du montage renvoie une
- * liste vide, pour que le test n'affirme que sur ce qu'il isole.
- */
+/** Drives one route; every other mount request answers an empty list. */
 const mockRouteOnce = (
   route: string,
   payload: unknown,
@@ -40,7 +37,7 @@ describe('useCookingState', () => {
 
   beforeEach(() => {
     process.env.NEXT_PUBLIC_MEALIE_BASE_URL = MOCK_MEALIE_BASE_URL;
-    // jsdom has no fetch; the hook fetches Mealie + saved recipes on mount
+    // jsdom has no fetch, and the hook fetches on mount.
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => [],
@@ -53,8 +50,7 @@ describe('useCookingState', () => {
     localStorage.clear();
   });
 
-  // Renders the hook and flushes the mount-effect fetches so their state
-  // updates land inside act()
+  // Flushes the mount-effect fetches so their updates land inside act().
   const renderCookingHook = async () => {
     const utils = renderHook(() => useCookingState());
 
@@ -111,7 +107,7 @@ describe('useCookingState', () => {
     });
 
     it('laisse l\'IA visible si la config Gemini est injoignable', async () => {
-      // Masquer l'IA sur une erreur réseau serait pire que la laisser échouer
+      // Hiding the AI on a network error is worse than letting it fail.
       mockRouteOnce('/api/gemini/config', ({}), { ok: false });
 
       const { result } = await renderCookingHook();
@@ -122,7 +118,7 @@ describe('useCookingState', () => {
 
   describe('intégration Mealie optionnelle', () => {
     it('marque Mealie comme non configuré sans lever d\'erreur', async () => {
-      // Le proxy répond ainsi quand MEALIE_BASE_URL est absente du .env
+      // What the proxy answers when MEALIE_BASE_URL is unset.
       mockRouteOnce('/api/mealie/recipes', ({ configured: false }));
 
       const { result } = await renderCookingHook();
@@ -151,8 +147,6 @@ describe('useCookingState', () => {
       steps: [{ text: 'Faire fondre le beurre 2 min / 100°C / vitesse 1.' }],
     };
 
-    // Le hook fetch Mealie + recettes sauvegardées au montage : on ne pilote que
-    // l'appel suivant, celui de l'agent.
     const mockAgentResponse = (payload: unknown, ok = true) => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok,
@@ -241,7 +235,7 @@ describe('useCookingState', () => {
       expect(proposal?.status).toBe('pending');
       expect(proposal?.changes).toHaveLength(1);
       expect(proposal?.recipe.ingredients[0].fullText).toBe("50 g d'huile d'olive");
-      // Tant que l'utilisateur n'a pas validé, la recette courante est intacte
+      // Until validated, the current recipe is untouched.
       expect(result.current.recipe).toEqual(CHAT_RECIPE);
     });
 
@@ -333,7 +327,7 @@ describe('useCookingState', () => {
       expect(result.current.chatMessages[1].proposal?.status).toBe('applied');
       expect(result.current.chatMessages[3].proposal?.status).toBe('stale');
 
-      // Une proposition obsolète ne peut plus écraser la recette
+      // A stale proposal can no longer overwrite the recipe.
       act(() => {
         result.current.applyProposal(result.current.chatMessages[3].id);
       });
@@ -347,7 +341,7 @@ describe('useCookingState', () => {
         result.current.setRecipe({ ...CHAT_RECIPE, firestoreId: 'rec-1' });
       });
 
-      // Rien n'a été appliqué : le bouton est masqué et l'appel est sans effet
+      // Nothing applied: the button is hidden and the call is a no-op.
       expect(result.current.hasUnsavedChanges).toBe(false);
       await act(async () => {
         await result.current.saveChatRecipe();
@@ -381,7 +375,7 @@ describe('useCookingState', () => {
         '/api/firestore/recipes/rec-1',
         expect.objectContaining({ method: 'PUT' }),
       );
-      // Une fois persistée, la recette n'est plus « sale » : plus de re-sauvegarde
+      // Once persisted the recipe is clean again.
       expect(result.current.hasUnsavedChanges).toBe(false);
 
       const callsAfterSave = (global.fetch as jest.Mock).mock.calls.length;
@@ -392,7 +386,7 @@ describe('useCookingState', () => {
     });
 
     it('met à jour le titre dans la liste d\'accueil après sauvegarde', async () => {
-      // La liste d'accueil est chargée au montage, puis on modifie la recette
+      // The home list loads on mount, then the recipe changes.
       (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
         url === '/api/firestore/recipes'
           ? {
@@ -441,11 +435,11 @@ describe('useCookingState', () => {
         await result.current.saveChatRecipe();
       });
 
-      // Retour à l'accueil : la liste doit refléter la recette modifiée
+      // Back home, the list must reflect the edited recipe.
       const summary = result.current.savedRecipes.find(r => r.id === 'rec-1');
       expect(summary?.title).toBe('Soupe à l\'huile');
       expect(summary?.description).toBe('Nouvelle description');
-      // Les autres champs du résumé ne sont pas écrasés
+      // The other summary fields are left alone.
       expect(summary?.createdAt).toBe('2026-08-31T15:07:43.853Z');
     });
 

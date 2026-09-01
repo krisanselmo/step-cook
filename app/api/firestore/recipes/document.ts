@@ -17,11 +17,9 @@ interface IncomingRecipe {
 }
 
 /**
- * Champs communs à la création et à la mise à jour d'une recette.
- *
- * Les étapes sont normalisées à l'écriture : après ce passage le document est
- * structuré quelle que soit la forme reçue, d'où le `schemaVersion` courant.
- * Firestore refusant les `undefined`, les champs absents deviennent `null`.
+ * Steps are normalised on write, so the document is structured whatever came
+ * in — hence the current `schemaVersion`. Firestore rejects `undefined`, so
+ * absent fields become `null`.
  */
 export const toRecipeDocument = (recipe: IncomingRecipe) => {
   const ingredients = recipe.ingredients || [];

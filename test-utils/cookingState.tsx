@@ -4,7 +4,7 @@ import { useCookingState } from '@/app/hooks/useCookingState';
 
 type CookingState = ReturnType<typeof useCookingState>;
 
-/** Thème neutre, partagé par les tests de vues. */
+/** Neutral theme, shared by the view tests. */
 export const mockTheme: ThemePlugin = {
   id: 'default',
   name: 'Default',
@@ -32,12 +32,8 @@ export const mockTheme: ThemePlugin = {
 };
 
 /**
- * État complet du hook, entièrement mocké, à surcharger par test.
- *
- * Les vues reçoivent leurs props depuis `useCookingState` : un objet partiel
- * compilait mal et obligeait chaque fichier de test à redéclarer le même
- * décor. Le type est ici celui du hook, donc un champ ajouté au hook casse la
- * compilation des tests plutôt que de passer inaperçu.
+ * The full hook state, mocked, to override per test. Typed with the hook's own
+ * type, so a field added to the hook breaks the tests rather than slipping by.
  */
 export const makeCookingState = (
   overrides: Partial<CookingState> = {},
