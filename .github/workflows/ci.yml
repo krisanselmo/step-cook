@@ -6,10 +6,18 @@ on:
   pull_request:
 
 jobs:
+  # Passe après `version` pour vérifier l'arbre réellement mergé : le commit de
+  # bump est poussé avec GITHUB_TOKEN, et GitHub ne redéclenche volontairement
+  # aucun workflow sur ce push. Sans cet ordre, le dernier commit de la PR ne
+  # serait couvert par rien.
   ci:
+    needs: [version]
+    if: always() && needs.version.result != 'failure' && needs.version.result != 'cancelled'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
