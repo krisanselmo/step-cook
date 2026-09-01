@@ -6,18 +6,40 @@ on:
   pull_request:
 
 jobs:
-  # Passe après `version` pour vérifier l'arbre réellement mergé : le commit de
-  # bump est poussé avec GITHUB_TOKEN, et GitHub ne redéclenche volontairement
-  # aucun workflow sur ce push. Sans cet ordre, le dernier commit de la PR ne
-  # serait couvert par rien.
+  # Le bump est une étape de ce job plutôt qu'un job séparé : un statut
+  # « skipped » se propage le long de la chaîne `needs`, et un job de version
+  # ignoré hors PR entraînait `docker` avec lui — c'est ce qui a privé la 0.2.0
+  # de publication. Un seul job, aucune chaîne, aucun `always()` à maintenir.
   ci:
-    needs: [version]
-    if: always() && needs.version.result != 'failure' && needs.version.result != 'cancelled'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
+          # Sur une PR : la branche elle-même, pour pouvoir y pousser le bump et
+          # vérifier l'arbre réellement mergé. L'historique complet sert au
+          # calcul de version (tags + commits depuis la dernière release).
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+          fetch-depth: 0
+
+      # Le tag de l'image vient de package.json : sans incrément, un merge
+      # réécrit silencieusement une version déjà publiée. Le bump se fait sur la
+      # branche de PR — main est protégée et refuserait un commit direct.
+      - name: Compute next version
+        if: github.event_name == 'pull_request'
+        id: next
+        run: .github/scripts/next-version.sh >> "$GITHUB_OUTPUT"
+
+      - name: Bump package.json
+        if: github.event_name == 'pull_request' && steps.next.outputs.bump_needed == 'true'
+        run: |
+          npm version "${{ steps.next.outputs.version }}" --no-git-tag-version
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json
+          git commit -m "chore(release): ${{ steps.next.outputs.version }}"
+          git push origin HEAD:${{ github.head_ref }}
 
       - uses: actions/setup-node@v4
         with:
@@ -35,46 +57,6 @@ jobs:
 
       - name: Build
         run: npm run build
-
-  # Le tag de l'image vient de package.json : sans incrément, un merge réécrit
-  # silencieusement une version déjà publiée. Le bump est donc calculé ici, sur
-  # la branche de PR — main est protégée et refuserait un commit direct de la CI.
-  version:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Compute next version
-        id: next
-        run: .github/scripts/next-version.sh >> "$GITHUB_OUTPUT"
-
-      - name: Bump package.json
-        if: steps.next.outputs.bump_needed == 'true'
-        run: |
-          npm version "${{ steps.next.outputs.version }}" --no-git-tag-version
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add package.json package-lock.json
-          git commit -m "chore(release): ${{ steps.next.outputs.version }}"
-          git push origin HEAD:${{ github.head_ref }}
-
-      - name: Summary
-        run: |
-          {
-            echo "### Version"
-            if [ "${{ steps.next.outputs.bump_needed }}" = 'true' ]; then
-              echo "\`${{ steps.next.outputs.previous }}\` → \`${{ steps.next.outputs.version }}\` (${{ steps.next.outputs.level }})"
-            else
-              echo "Déjà à \`${{ steps.next.outputs.version }}\`, rien à incrémenter."
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
 
   # Image multi-arch (amd64 + arm64) poussée sur Docker Hub, même tags que build.sh
   docker:
