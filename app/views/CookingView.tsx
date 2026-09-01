@@ -244,51 +244,64 @@ export const CookingView: React.FC<CookingViewProps> = ({
       {/* Main Content */}
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {isOverview ? (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* KPIs: Temps de prépa, cuisson, total */}
-            {(recipe.prepTime || recipe.cookTime || recipe.totalTime) && (
-              <div className="flex gap-3 flex-wrap">
-                {recipe.prepTime && (
-                  <div className={`flex items-center gap-2 px-3 py-2 ${theme.properties.radius} border ${t('bg-gray-800/50 border-gray-700/50', 'bg-gray-50 border-gray-200')}`}>
-                    <Clock size={16} className={theme.colors.accent} />
-                    <div>
-                      <p className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-500', 'text-gray-400')}`}>Prépa</p>
-                      <p className="text-sm font-medium">{recipe.prepTime}</p>
-                    </div>
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+            {/* Temps + description sur une seule ligne tant que la largeur le permet */}
+            {(recipe.prepTime ||
+              recipe.cookTime ||
+              recipe.totalTime ||
+              recipe.description) && (
+              <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+                {(recipe.prepTime || recipe.cookTime || recipe.totalTime) && (
+                  <div className="flex gap-2 flex-wrap">
+                    <TimePill
+                      icon={Clock}
+                      iconClass={theme.colors.accent}
+                      label="Prépa"
+                      value={recipe.prepTime}
+                      theme={theme}
+                      t={t}
+                    />
+                    <TimePill
+                      icon={Flame}
+                      iconClass="text-red-500"
+                      label="Cuisson"
+                      value={recipe.cookTime}
+                      theme={theme}
+                      t={t}
+                    />
+                    <TimePill
+                      icon={Timer}
+                      iconClass="text-blue-500"
+                      label="Total"
+                      value={recipe.totalTime}
+                      theme={theme}
+                      t={t}
+                    />
                   </div>
                 )}
-                {recipe.cookTime && (
-                  <div className={`flex items-center gap-2 px-3 py-2 ${theme.properties.radius} border ${t('bg-gray-800/50 border-gray-700/50', 'bg-gray-50 border-gray-200')}`}>
-                    <Flame size={16} className="text-red-500" />
-                    <div>
-                      <p className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-500', 'text-gray-400')}`}>Cuisson</p>
-                      <p className="text-sm font-medium">{recipe.cookTime}</p>
-                    </div>
-                  </div>
-                )}
-                {recipe.totalTime && (
-                  <div className={`flex items-center gap-2 px-3 py-2 ${theme.properties.radius} border ${t('bg-gray-800/50 border-gray-700/50', 'bg-gray-50 border-gray-200')}`}>
-                    <Timer size={16} className="text-blue-500" />
-                    <div>
-                      <p className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-500', 'text-gray-400')}`}>Total</p>
-                      <p className="text-sm font-medium">{recipe.totalTime}</p>
-                    </div>
-                  </div>
+                {recipe.description && (
+                  <p
+                    className={`text-sm leading-snug min-w-64 flex-1 ${t('text-gray-400', 'text-gray-500')}`}
+                  >
+                    {recipe.description}
+                  </p>
                 )}
               </div>
             )}
 
-            {/* Description */}
-            {recipe.description && (
-              <p className={`text-sm leading-relaxed ${t('text-gray-400', 'text-gray-500')}`}>
-                {recipe.description}
-              </p>
-            )}
-
-            <h2 className={`text-2xl font-bold ${theme.colors.accent}`}>
+            <h2
+              className={`text-lg font-bold flex items-baseline gap-2 ${theme.colors.accent}`}
+            >
               Ingrédients
+              <span
+                className={`text-xs font-medium ${t('text-gray-500', 'text-gray-400')}`}
+              >
+                {checkedIngredients.size}/{recipe.ingredients.length}
+              </span>
             </h2>
-            <div className="space-y-3">
+            {/* Grille : une liste de 20 ingrédients tient en 5 lignes sur un
+                grand écran au lieu de 20, sans rogner sur la cible tactile. */}
+            <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {recipe.ingredients.map((ing, i) => {
                 const isChecked = checkedIngredients.has(ing.fullText);
 
@@ -296,7 +309,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
                   <button
                     key={i}
                     onClick={() => handleIngredientAction(ing.fullText)}
-                    className={`flex w-full items-center gap-4 text-left p-3 ${theme.properties.radius} transition-all ${
+                    className={`flex w-full items-center gap-3 text-left px-3 py-2 ${theme.properties.radius} transition-all ${
                       isChecked
                         ? t(
                             theme.colors.checkedBgDark,
@@ -309,16 +322,16 @@ export const CookingView: React.FC<CookingViewProps> = ({
                     }`}
                   >
                     <div
-                      className={`w-6 h-6 border-2 flex items-center justify-center shrink-0 transition-colors ${theme.properties.radius} ${
+                      className={`w-5 h-5 border-2 flex items-center justify-center shrink-0 transition-colors ${theme.properties.radius} ${
                         isChecked
                           ? `${theme.colors.bgPrimary} ${theme.colors.borderAccent} text-white`
                           : t('border-gray-600', 'border-gray-300')
                       }`}
                     >
-                      {isChecked && <Check size={14} strokeWidth={3} />}
+                      {isChecked && <Check size={12} strokeWidth={3} />}
                     </div>
                     <span
-                      className={`text-lg leading-snug transition-all ${isChecked ? 'line-through opacity-60' : ''}`}
+                      className={`text-base leading-snug transition-all ${isChecked ? 'line-through opacity-60' : ''}`}
                     >
                       {ing.fullText}
                     </span>
@@ -327,15 +340,20 @@ export const CookingView: React.FC<CookingViewProps> = ({
               })}
             </div>
 
-            {/* Étapes (collapsed) */}
+            {/* Étapes */}
             {recipe.steps.length > 0 && (
-              <details className={`${theme.properties.radius} border overflow-hidden ${t('border-gray-700/50', 'border-gray-200')}`}>
+              // Ouvert d'emblée : l'aperçu tient désormais en haut de page, et
+              // la place restante vaut mieux remplie par les étapes.
+              <details
+                open
+                className={`${theme.properties.radius} border overflow-hidden ${t('border-gray-700/50', 'border-gray-200')}`}
+              >
                 <summary className={`flex items-center gap-2 cursor-pointer p-3 select-none ${t('hover:bg-gray-800/50', 'hover:bg-gray-50')} [&>svg.chevron]:open:rotate-180`}>
                   <ListOrdered size={18} className={theme.colors.accent} />
                   <span className="font-bold flex-1">Étapes ({recipe.steps.length})</span>
                   <ChevronDown size={16} className={`chevron transition-transform ${t('text-gray-500', 'text-gray-400')}`} />
                 </summary>
-                <div className={`p-3 space-y-2 border-t ${t('border-gray-700/50', 'border-gray-200')}`}>
+                <div className={`p-3 grid gap-x-4 gap-y-1 xl:grid-cols-2 border-t ${t('border-gray-700/50', 'border-gray-200')}`}>
                   {recipe.steps.map((step, i) => (
                     <div
                       key={i}
@@ -697,6 +715,34 @@ export const CookingView: React.FC<CookingViewProps> = ({
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+/** Durée de l'aperçu (prépa, cuisson, total). Rien à afficher sans valeur. */
+const TimePill: React.FC<{
+  icon: React.ElementType;
+  iconClass: string;
+  label: string;
+  value?: string;
+  theme: ThemePlugin;
+  t: (dark: string, light: string) => string;
+}> = ({ icon: Icon, iconClass, label, value, theme, t }) => {
+  if (!value) {
+    return null;
+  }
+
+  return (
+    <div
+      className={`flex items-center gap-1.5 px-2.5 py-1 text-sm ${theme.properties.radius} border ${t('bg-gray-800/50 border-gray-700/50', 'bg-gray-50 border-gray-200')}`}
+    >
+      <Icon size={14} className={iconClass} />
+      <span
+        className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-500', 'text-gray-400')}`}
+      >
+        {label}
+      </span>
+      <span className="font-medium">{value}</span>
     </div>
   );
 };
