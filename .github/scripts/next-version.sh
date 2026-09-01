@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
 #
-# Calcule la prochaine version depuis les préfixes de commit, et écrit le
-# résultat au format `clé=valeur` (sorties d'une étape GitHub Actions).
+# Next version from commit prefixes, written as GitHub Actions step outputs.
 #
-#   feat            -> mineure
-#   `!` ou BREAKING -> majeure
-#   le reste        -> patch
+#   feat           -> minor
+#   `!` / BREAKING -> major
+#   anything else  -> patch
 #
-# La référence est le dernier tag `v*`. Le bump est ignoré si package.json a
-# déjà dépassé la dernière version publiée : l'étape est ainsi rejouable sans
-# empiler les incréments à chaque nouveau commit poussé sur la PR.
+# Skips the bump once package.json is past the last released version, so
+# pushing more commits to a PR does not stack increments.
 set -euo pipefail
 
 current=$(node -p "require('./package.json').version")
@@ -17,7 +15,7 @@ last_tag=$(git tag -l 'v*' --sort=-v:refname | head -1)
 released=${last_tag#v}
 
 if [ -z "$last_tag" ]; then
-  # Aucun tag : on part de package.json et on lit tout l'historique.
+  # No tag yet: start from package.json and read the whole history.
   released=$current
   range=HEAD
 else

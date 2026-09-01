@@ -2,12 +2,11 @@ import { test } from '@playwright/test';
 import { mockRecipeApis, sampleRecipe } from './fixtures';
 
 /**
- * Génère les captures d'écran utilisées dans le README.
- * Taguées @capture → exclues du run E2E par défaut (évite le churn d'images),
- * lancées explicitement via : npm run test:e2e:screenshots
+ * README screenshots. Tagged @capture so the default E2E run skips them and
+ * images do not churn; run with `npm run test:e2e:screenshots`.
  *
- * `animations: 'disabled'` fast-forward les transitions CSS — sinon une capture
- * peut figer un thème / dark mode en pleine transition de couleurs.
+ * `animations: 'disabled'` fast-forwards CSS transitions, otherwise a capture
+ * can freeze a theme mid-fade.
  */
 const DIR = 'docs/screenshots';
 const PHONE = { width: 390, height: 844 };
@@ -25,14 +24,14 @@ test.describe('@capture', () => {
   });
 
   test('aperçu de la recette (mobile)', async ({ page }) => {
-    // Navigation à la taille desktop (la colonne Manuel y est visible)...
+    // Navigate at desktop size, where the Manual column is visible...
     await page.goto('/');
     await page
       .getByPlaceholder('Ou collez une recette ici...')
       .fill(sampleRecipe);
     await page.getByRole('button', { name: 'Cuisiner' }).click();
     await page.getByRole('heading', { name: 'Ingrédients' }).waitFor();
-    // ...puis capture en viewport mobile (la vue cuisine est responsive).
+    // ...then capture on a mobile viewport.
     await page.setViewportSize(PHONE);
     await page.screenshot({ path: `${DIR}/02-apercu.png`, ...SHOT });
   });
@@ -55,8 +54,8 @@ test.describe('@capture', () => {
       localStorage.setItem('isDarkMode', 'false');
     });
     await page.goto('/');
-    // Attend que le mode clair soit appliqué : en clair, le bouton propose
-    // « Passer en mode sombre » (évite de capturer pendant la transition).
+    // In light mode the button offers "Passer en mode sombre"; waiting on it
+    // avoids capturing mid-transition.
     await page
       .getByRole('button', { name: 'Passer en mode sombre' })
       .waitFor();

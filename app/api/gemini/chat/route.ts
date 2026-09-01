@@ -9,7 +9,7 @@ import {
   parseIngredientLine,
 } from '@/app/lib/utils';
 
-/** Nombre de tours de conversation renvoyés au modèle (borne la taille du prompt). */
+/** Bounds the prompt size. */
 const MAX_HISTORY_MESSAGES = 12;
 
 interface HistoryMessage {
@@ -31,7 +31,7 @@ const RESPONSE_SCHEMA = {
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every(item => typeof item === 'string');
 
-/** Ne garde que les chaînes non vides d'un tableau potentiellement hétérogène. */
+/** Non-empty strings only, from a possibly heterogeneous array. */
 const toCleanStringArray = (value: unknown): string[] =>
   Array.isArray(value)
     ? value.filter((item): item is string => typeof item === 'string' && item.trim() !== '')
@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
       2,
     );
 
-    // La recette est jointe au dernier tour plutôt qu'au prompt système : elle
-    // évolue au fil des propositions acceptées, l'agent doit voir la version courante.
+    // Attached to the last turn, not the system prompt: it changes as
+    // proposals are accepted and the agent must see the current version.
     const pastTurns: HistoryMessage[] = Array.isArray(history)
       ? history
           .filter(
@@ -132,8 +132,8 @@ export async function POST(req: NextRequest) {
       isStringArray(proposedRecipe.ingredients) &&
       proposedSteps.length > 0;
 
-    // Le modèle peut annoncer une proposition sans fournir de recette exploitable :
-    // on retombe alors sur une simple réponse plutôt que d'échouer.
+    // The model can announce a proposal without a usable recipe; fall back to
+    // a plain answer rather than fail.
     if (!hasUsableProposal) {
       return NextResponse.json({ action: 'answer', reply: parsed.reply });
     }

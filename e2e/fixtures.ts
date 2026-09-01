@@ -1,9 +1,6 @@
 import type { Page, Route } from '@playwright/test';
 
-/**
- * Recette en texte libre qui se parse intégralement côté client
- * (mode manuel) — aucun service externe requis.
- */
+/** Free text, parsed entirely client-side: no external service needed. */
 export const sampleRecipe = `Gâteau au chocolat fondant
 Ingrédients:
 - 200g de chocolat noir
@@ -44,12 +41,8 @@ const savedRecipes = [
 ];
 
 /**
- * Recette en schéma 2 telle que la route `/api/gemini/generate` la renvoie,
- * décalquée d'une vraie génération Gemini.
- *
- * Les tests rejouent cette capture au lieu d'appeler le modèle : le quota de
- * l'API est limité, et une sortie non déterministe ne permettrait pas
- * d'affirmer quoi que ce soit sur ce que l'UI affiche.
+ * Traced from a real Gemini generation. Tests replay this capture rather than
+ * call the model: the API quota is limited and its output is not deterministic.
  */
 export const structuredRecipe = {
   title: 'Velouté de carottes au cumin',
@@ -98,12 +91,12 @@ export const structuredRecipe = {
       ingredients: ['150g de crème fraîche'],
       settings: { seconds: 60, speed: '10' },
     },
-    // Étape sans robot : ni minuteur, ni matériel, ni ingrédient.
+    // No appliance: no timer, no equipment, no ingredient.
     { text: 'Servir bien chaud.' },
   ],
 };
 
-/** Proposition de l'agent : même schéma 2, crème remplacée par du lait de coco. */
+/** Agent proposal, same schema 2, cream swapped for coconut milk. */
 export const structuredProposal = {
   action: 'propose',
   reply: 'Je te propose de remplacer la crème fraîche par du lait de coco.',
@@ -129,10 +122,7 @@ export const structuredProposal = {
   ],
 };
 
-/**
- * Intercepte les routes Mealie + Firestore pour des données déterministes,
- * sans dépendre des variables d'environnement ni des services externes.
- */
+/** Deterministic Mealie + Firestore data, independent of env and services. */
 export async function mockRecipeApis(
   page: Page,
   opts: { mealie?: unknown[]; saved?: unknown[] } = {},
@@ -145,7 +135,7 @@ export async function mockRecipeApis(
   );
 }
 
-/** Force l'UI à considérer Gemini comme configuré, sans clé d'API réelle. */
+/** Makes the UI treat Gemini as configured, without a real API key. */
 export async function mockGeminiConfigured(page: Page) {
   await page.route('**/api/gemini/config', route =>
     route.fulfill({ json: { configured: true } }),
@@ -153,11 +143,9 @@ export async function mockGeminiConfigured(page: Page) {
 }
 
 /**
- * Mocke la génération et capture ce que l'app tente ensuite d'enregistrer.
- *
- * Le tableau renvoyé se remplit à la sauvegarde : c'est lui qui permet de
- * vérifier que les données structurées survivent au passage par le client, là
- * où une re-normalisation les avait déjà effacées en silence.
+ * Mocks generation and captures what the app then tries to save. The returned
+ * array is how a test asserts the structured data survives the client, where a
+ * re-normalisation once erased it silently.
  */
 export async function mockGeminiGenerate(
   page: Page,
@@ -183,12 +171,8 @@ export async function mockGeminiGenerate(
 }
 
 /**
- * Fixe le matériel possédé avant le chargement de l'app.
- *
- * La configuration vit dans le localStorage et plusieurs accessoires ne sont
- * pas cochés d'origine (Découpe-minute, épluche-légumes…) : sans ce réglage,
- * une étape qui les utilise afficherait le bandeau « non configuré » au lieu
- * du panneau attendu.
+ * Several accessories are unticked by default, so a step using one would show
+ * the "not configured" banner instead of the panel under test.
  */
 export async function mockOwnedEquipment(page: Page, ids: string[] = ALL_EQUIPMENT) {
   await page.addInitScript(
@@ -210,12 +194,12 @@ export const ALL_EQUIPMENT = [
   'sensor',
 ];
 
-/** Mocke l'agent conversationnel avec une réponse donnée. */
+/** Mocks the chat agent with a given response. */
 export async function mockAgent(page: Page, json: unknown) {
   await page.route('**/api/gemini/chat', route => route.fulfill({ json }));
 }
 
-/** Saisit une recette en mode manuel et démarre la cuisson. */
+/** Enters a recipe in manual mode and starts cooking. */
 export async function cookManualRecipe(page: Page, recipe = sampleRecipe) {
   await page.getByPlaceholder('Ou collez une recette ici...').fill(recipe);
   await page.getByRole('button', { name: 'Cuisiner' }).click();

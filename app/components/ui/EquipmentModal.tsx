@@ -20,10 +20,7 @@ import { CUTTER_ID, CUTTER_MODES, EQUIPMENT } from '@/app/lib/equipment';
 import { CloseButton } from './CloseButton';
 import { CutterDisc } from './CutterDisc';
 
-/**
- * Icônes du catalogue. Elles vivent ici plutôt que dans `equipment.ts` pour
- * garder ce dernier pur (il est aussi importé côté serveur par les routes IA).
- */
+/** Kept out of `equipment.ts`, which the AI routes import server-side. */
 const EQUIPMENT_ICONS: Record<string, React.ElementType> = {
   varoma: CookingPot,
   'panier-cuisson': Beaker,

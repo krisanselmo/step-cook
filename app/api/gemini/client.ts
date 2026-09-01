@@ -4,12 +4,8 @@ import { GoogleGenAI } from '@google/genai';
 const DEFAULT_MODEL = 'gemini-2.5-flash';
 
 /**
- * Client Gemini et modèle à utiliser, ou la réponse d'erreur à renvoyer telle
- * quelle si l'intégration n'est pas configurée.
- *
- * Les deux routes IA partagent la même clé et le même modèle : les garder
- * synchronisées à la main, c'est risquer que l'une parle à un autre modèle que
- * l'autre.
+ * The client and model, or the error response to return as-is when the
+ * integration is unconfigured. Shared so both AI routes cannot drift apart.
  */
 export const getGeminiClient = ():
   | { ai: GoogleGenAI; modelName: string; error?: never }

@@ -26,8 +26,7 @@ export async function POST(request: Request) {
       ...(cfCookie ? { Cookie: cfCookie } : {}),
     };
 
-    // 1. CRÉATION DU COOK LOG (Pour la Timeline)
-    // C'est cette étape qui permet de voir la recette dans https://mealie.../timeline
+    // The cook log is what makes the recipe appear in the Mealie timeline.
     try {
       console.log(`[Mealie Log] Creating cook log for slug: ${slug}`);
       const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
@@ -54,14 +53,13 @@ export async function POST(request: Request) {
       console.error('[Mealie Log] Failed to contact cook-logs endpoint:', e);
     }
 
-    // 2. TRAITEMENT DE L'IMAGE (Si présente)
     if (image && image.size > 0) {
       console.log(
         `[Mealie Image] Attempting upload for slug: ${slug} (${image.name})`,
       );
 
       const mealieFormData = new FormData();
-      // On passe directement le File. Fetch en Node gère le stream correctement.
+      // Node's fetch streams the File correctly.
       mealieFormData.append('image', image);
 
       const imgResponse = await fetch(`${baseUrl}/api/recipes/${slug}/image`, {
@@ -77,7 +75,7 @@ export async function POST(request: Request) {
           imgErrorText,
         );
 
-        // On retourne une erreur spécifique pour l'image mais le log a été tenté
+        // Image-specific error; the cook log was already attempted.
         return NextResponse.json(
           {
             success: false,

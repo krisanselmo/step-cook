@@ -5,7 +5,6 @@ import { InputView } from '../InputView';
 import { useCookingState } from '@/app/hooks/useCookingState';
 import { makeCookingState, mockTheme } from '@/test-utils/cookingState';
 
-// Mock the useCookingState hook
 jest.mock('@/app/hooks/useCookingState');
 
 describe('InputView', () => {
@@ -13,10 +12,9 @@ describe('InputView', () => {
     typeof useCookingState
   >;
 
-  // Common props to pass to InputView for testing
   const isDarkMode = true;
 
-  // `handleGeminiGenerate` est une prop propre à InputView, absente de l'état du hook.
+  // `handleGeminiGenerate` is an InputView prop, not part of the hook state.
   const defaultProps = {
     ...makeCookingState({
       isDarkMode,
@@ -29,10 +27,7 @@ describe('InputView', () => {
   };
 
   beforeEach(() => {
-    // Reset mocks before each test
     jest.clearAllMocks();
-    // Set a default mock implementation for useCookingState
-    // InputView manages its own activeTab state, so we don't mock it here
     mockUseCookingState.mockReturnValue(defaultProps);
   });
 
@@ -86,7 +81,7 @@ describe('InputView', () => {
   it('switches to Gemini tab and handles input', async () => {
     render(<InputView {...defaultProps} />);
 
-    // La colonne « Assistant IA » est rendue d'emblée (desktop), pas d'onglet à activer.
+    // On desktop the AI column renders straight away, no tab to activate.
     const geminiTextarea = screen.getByPlaceholderText(
       /Décrivez votre recette de rêve/i,
     ) as HTMLTextAreaElement;
@@ -116,7 +111,7 @@ describe('InputView', () => {
     ];
     render(<InputView {...defaultProps} mealieRecipes={mealieRecipes} />);
 
-    // Mealie et recettes sauvegardées sont fusionnées dans la colonne « Recettes ».
+    // Mealie and saved recipes are merged into one column.
     expect(screen.getByText('Recipe One')).toBeInTheDocument();
     expect(screen.getByText('Recipe Two')).toBeInTheDocument();
 
@@ -143,10 +138,10 @@ describe('InputView', () => {
       />,
     );
 
-    // Ni bandeau d'erreur, ni filtre : l'intégration n'existe pas pour cet utilisateur
+    // No banner, no filter: the integration does not exist for this user.
     expect(screen.queryByText('Mealie indisponible')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mealie' })).not.toBeInTheDocument();
-    // Une seule source restante : filtrer par source n'a plus de sens
+    // One source left, so the source filter is pointless.
     expect(screen.queryByRole('button', { name: 'IA' })).not.toBeInTheDocument();
   });
 
@@ -155,7 +150,7 @@ describe('InputView', () => {
 
     expect(screen.queryByText('Assistant IA')).not.toBeInTheDocument();
     expect(screen.queryByText('Générer Recette')).not.toBeInTheDocument();
-    // Le mode manuel, lui, ne dépend d'aucune intégration
+    // Manual mode depends on no integration.
     expect(screen.getByText('Mode Manuel')).toBeInTheDocument();
   });
 
@@ -192,9 +187,9 @@ describe('InputView', () => {
       />,
     );
 
-    // Le bandeau signale la panne...
+    // The banner reports the outage...
     expect(screen.getByText('Mealie indisponible')).toBeInTheDocument();
-    // ...sans masquer la source qui a répondu
+    // ...without hiding the source that answered.
     expect(screen.getByText('Clafoutis aux Figues')).toBeInTheDocument();
     expect(screen.queryByText('Aucune recette trouvée.')).not.toBeInTheDocument();
   });

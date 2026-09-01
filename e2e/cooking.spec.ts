@@ -18,7 +18,7 @@ test('parse une recette manuelle et affiche l’aperçu', async ({ page }) => {
     page.getByRole('button', { name: /200g de chocolat noir/ }),
   ).toBeVisible();
   await expect(page.getByRole('button', { name: /3 œufs/ })).toBeVisible();
-  // Bouton de démarrage : libellé visible « Démarrer », aria-label « Étape suivante ».
+  // Visible label is "Démarrer", accessible name is "Étape suivante".
   await expect(
     page.getByRole('button', { name: 'Étape suivante' }),
   ).toBeVisible();
@@ -29,8 +29,7 @@ test('navigue dans les étapes et extrait les paramètres Thermomix', async ({
 }) => {
   await page.getByRole('button', { name: 'Étape suivante' }).click(); // Démarrer
 
-  // Étape 1 : "3 min à 50°C vitesse 2" — on cible les cadrans (texte exact)
-  // car la valeur figure aussi dans le texte de l'étape.
+  // Exact text targets the dials: the values also appear in the step text.
   await expect(page.getByText('Étape 1', { exact: true })).toBeVisible();
   await expect(page.getByText('50°C', { exact: true })).toBeVisible();
   await expect(page.getByText('03:00', { exact: true })).toBeVisible();
@@ -46,6 +45,6 @@ test('coche un ingrédient dans l’aperçu', async ({ page }) => {
   const ingredient = page.getByRole('button', { name: /3 œufs/ });
 
   await ingredient.click();
-  // L'ingrédient coché reçoit un style barré.
+  // A ticked ingredient is struck through.
   await expect(ingredient).toHaveClass(/line-through/);
 });

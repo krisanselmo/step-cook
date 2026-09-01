@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: '/icon.svg',
-    // iOS n'affiche pas les SVG en icône d'écran d'accueil : il faut un PNG.
+    // iOS will not use an SVG as a home-screen icon.
     apple: '/icon-192x192.png',
   },
 };

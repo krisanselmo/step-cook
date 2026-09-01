@@ -4,16 +4,13 @@ import React from 'react';
 
 interface VaromaStackProps {
   size?: number;
-  /** Classe de couleur (le visuel est dessiné en `currentColor`). */
+  /** Colour class; drawn in `currentColor`. */
   className?: string;
-  /** Anime la vapeur, pendant que le timer de l'étape tourne. */
+  /** Animates the steam while the step timer runs. */
   steaming?: boolean;
 }
 
-/**
- * Le Varoma monté sur le bol, vu de face : bol du robot, récipient Varoma (plus
- * large que le bol), plateau vapeur et couvercle, avec la vapeur qui s'échappe.
- */
+/** The Varoma stacked on the bowl, seen from the front. */
 export const VaromaStack: React.FC<VaromaStackProps> = ({
   size = 88,
   className = '',

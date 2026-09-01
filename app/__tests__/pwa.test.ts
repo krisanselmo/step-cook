@@ -58,8 +58,8 @@ describe.each([
 
     // Signature PNG.
     expect(buf.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
-    // Dimensions réelles (IHDR) — doivent matcher le `sizes` du manifest,
-    // sinon Chrome rejette l’icône et n’offre pas l’installation.
+    // Real IHDR dimensions must match the manifest `sizes`, or Chrome rejects
+    // the icon and never offers installation.
     expect(buf.readUInt32BE(16)).toBe(size);
     expect(buf.readUInt32BE(20)).toBe(size);
   });

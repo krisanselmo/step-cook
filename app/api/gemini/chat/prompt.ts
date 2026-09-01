@@ -2,17 +2,7 @@ import { buildEquipmentPromptBlock } from '@/app/lib/equipment';
 import { ACCESSORIES_FIELD_INSTRUCTIONS } from '@/app/api/gemini/recipeSchema';
 
 /**
- * Prompt système de l'agent conversationnel.
- *
- * L'agent a deux capacités :
- *  - `answer` : répondre directement (question, conseil, clarification) ;
- *  - `propose` : proposer une version modifiée de la recette.
- *
- * Une proposition n'est JAMAIS appliquée automatiquement : elle est soumise à
- * l'utilisateur qui l'accepte ou la refuse (HITL — human in the loop).
- *
- * Le bloc « matériel » décrit la configuration de l'utilisateur : l'agent doit
- * répondre et proposer en tenant compte des accessoires réellement disponibles.
+ * A proposal is never applied automatically: the user accepts or rejects it.
  */
 export const buildAgentPrompt = (ownedEquipment?: unknown): string =>
   `Tu es un assistant culinaire expert, spécialisé Thermomix, intégré à une application qui affiche une recette étape par étape.

@@ -7,7 +7,6 @@ import { ChatMessage, Recipe, StepParams } from '@/app/lib/types';
 import { DEFAULT_EQUIPMENT_IDS } from '@/app/lib/equipment';
 import { makeCookingState, mockTheme } from '@/test-utils/cookingState';
 
-// Mock the useCookingState hook
 jest.mock('@/app/hooks/useCookingState');
 
 describe('CookingView', () => {
@@ -152,15 +151,14 @@ describe('CookingView', () => {
       expect(screen.getByText('Ingrédients')).toBeInTheDocument();
       expect(screen.getByText('1 Egg')).toBeInTheDocument();
       expect(screen.getByText('2 Sugar')).toBeInTheDocument();
-      // Le bouton affiche « Démarrer » mais son nom accessible est « Étape suivante »
-      // (aria-label), on le cible donc par son texte.
+      // Visible label is "Démarrer", accessible name is "Étape suivante".
       expect(screen.getByText('Démarrer')).toBeInTheDocument();
     });
 
     it('calls setCurrentStep with 0 when "Démarrer" is clicked', () => {
       render(<CookingView {...getMockedDefaultProps({ currentStep: -1 })} />);
       fireEvent.click(screen.getByText('Démarrer').closest('button')!);
-      // La navigation utilise une fonction de mise à jour : setCurrentStep(p => ...)
+      // Navigation uses an updater: setCurrentStep(p => ...).
       const updater = mockSetCurrentStep.mock.calls[0][0];
       expect(updater(-1)).toBe(0);
     });
@@ -209,8 +207,7 @@ describe('CookingView', () => {
       fireEvent.click(screen.getByText('Temps').closest('button')!);
       expect(initialProps.setIsTimerRunning).toHaveBeenCalledWith(true);
 
-      // Le composant lit timer/isTimerRunning depuis ses props : on re-render
-      // avec un timer en cours pour simuler la bascule inverse.
+      // Props-driven, so re-render with a running timer to test the reverse.
       const runningTimerProps = {
         ...initialProps,
         timer: 299,
@@ -251,7 +248,7 @@ describe('CookingView', () => {
 
     it('renders the "Recette Terminée !" message', () => {
       render(<CookingView {...finishedProps} />);
-      // Le titre est réparti sur deux lignes via un <br/>, on cible donc le <h2>.
+      // The title is split by a <br/>, so target the <h2>.
       expect(
         screen.getByText(
           (_, el) =>
@@ -292,7 +289,7 @@ describe('CookingView', () => {
       const initialProps = getMockedDefaultProps({ isDarkMode: false });
       mockUseCookingState.mockReturnValue(initialProps);
       render(<CookingView {...initialProps} />);
-      // En mode clair (isDarkMode=false), le bouton propose de passer en mode sombre.
+      // In light mode the button offers to switch to dark.
       const toggleButton = screen.getByRole('button', {
         name: /Passer en mode sombre/i,
       });
@@ -389,5 +386,4 @@ describe('CookingView', () => {
     });
   });
 
-  // More tests would be added for modals, upload, theme dropdown, etc.
 });

@@ -2,11 +2,8 @@ import { Type } from '@google/genai';
 import { CUTTER_MODES, EQUIPMENT, GOBELET_ID } from '@/app/lib/equipment';
 
 /**
- * Schéma de sortie structurée imposé à Gemini.
- *
- * Les accessoires sont déclarés par le modèle, contraints à l'enum du
- * catalogue : l'application n'a plus à les deviner en relisant la prose de
- * l'étape (heuristique désormais réservée aux recettes Mealie).
+ * Structured output imposed on Gemini. Accessories are constrained to the
+ * catalogue enum, so the app never guesses them from the step prose.
  */
 export const STEP_SCHEMA = {
   type: Type.OBJECT,
@@ -46,8 +43,8 @@ export const STEP_SCHEMA = {
           description: 'true pour le sens inverse.',
         },
       },
-      // Champ le plus souvent oublié quand il accompagne un temps et une
-      // température : on force le modèle à trancher plutôt qu'à l'omettre.
+      // Most often omitted when it accompanies a time and a temperature, so
+      // the model is forced to answer rather than skip it.
       required: ['speed'],
     },
     accessories: {
@@ -95,10 +92,7 @@ export const RECIPE_SCHEMA = {
   required: ['title', 'ingredients', 'steps'],
 };
 
-/**
- * Consigne commune aux deux prompts : le champ `accessories` fait autorité, le
- * texte de l'étape n'est plus relu pour deviner le matériel.
- */
+/** Shared by both prompts: the declared fields are authoritative. */
 export const ACCESSORIES_FIELD_INSTRUCTIONS = `CHAMPS "settings", "accessories" ET "ingredients" DE CHAQUE ÉTAPE — ce sont eux qui pilotent l'affichage dans l'application, le texte de l'étape n'est JAMAIS analysé. Une étape qui oublie de les renseigner s'affichera sans minuteur, sans matériel et sans ingrédients.
 
 "settings" :

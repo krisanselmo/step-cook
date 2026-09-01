@@ -5,8 +5,7 @@ export async function GET() {
   const token = process.env.MEALIE_API_TOKEN;
   const cfCookie = process.env.MEALIE_CF_COOKIE; // Récupération du cookie
 
-  // Intégration optionnelle : non configurée n'est pas une panne. On le dit
-  // explicitement pour que l'UI masque Mealie au lieu d'afficher une erreur.
+  // Unconfigured is not an outage: say so, and the UI hides Mealie.
   if (!baseUrl) {
     return NextResponse.json({ configured: false });
   }
@@ -16,7 +15,7 @@ export async function GET() {
     'Content-Type': 'application/json',
   };
 
-  // Injection du cookie si présent (pour passer Cloudflare Zero Trust)
+  // Cookie for Cloudflare Zero Trust.
   if (cfCookie) {
     headers['Cookie'] = cfCookie;
   }
@@ -31,7 +30,6 @@ export async function GET() {
       },
     );
 
-    // On lit le texte brut d'abord pour pouvoir le logger en cas d'erreur
     const responseText = await response.text();
 
     if (!response.ok) {
@@ -45,7 +43,6 @@ export async function GET() {
     try {
       const data = JSON.parse(responseText);
 
-      // On retourne items si paginé, ou la réponse directe
       return NextResponse.json(data.items || data);
     } catch {
       console.error(

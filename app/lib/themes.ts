@@ -1,7 +1,7 @@
 import { ChefHat, Fish, Rat, Skull, Star, Zap } from 'lucide-react';
 import { ThemePlugin } from './types';
 
-// Thème 1 : Classique (Vert/Clean)
+// Classic (green, clean)
 export const defaultTheme: ThemePlugin = {
   id: 'default',
   name: 'Classique',
@@ -28,7 +28,7 @@ export const defaultTheme: ThemePlugin = {
   },
 };
 
-// Thème 2 : Dave The Diver (Pixel Art / Bancho Sushi)
+// Dave The Diver (pixel art)
 const daveTheme: ThemePlugin = {
   id: 'dave',
   name: 'Dave The Diver',
@@ -60,7 +60,7 @@ const daveTheme: ThemePlugin = {
   },
 };
 
-// Thème 3 : Cyberpunk (Rose/Néon/Mono)
+// Cyberpunk (pink, neon, mono)
 const cyberTheme: ThemePlugin = {
   id: 'cyber',
   name: 'Cyberpunk',
@@ -88,7 +88,7 @@ const cyberTheme: ThemePlugin = {
   },
 };
 
-// Thème 4 : Monkey Island (Pirate / Rétro aventure)
+// Monkey Island (retro adventure)
 const monkeyIslandTheme: ThemePlugin = {
   id: 'monkey-island',
   name: 'Monkey Island',
@@ -116,7 +116,7 @@ const monkeyIslandTheme: ThemePlugin = {
   },
 };
 
-// Thème 5 : Ratatouille (Paris / Gusteau's)
+// Ratatouille (Gusteau's)
 const ratatouilleTheme: ThemePlugin = {
   id: 'ratatouille',
   name: 'Ratatouille',
@@ -137,7 +137,7 @@ const ratatouilleTheme: ThemePlugin = {
     shadowAccent: 'shadow-[0_0_20px_rgba(192,57,43,0.22)]',
     checkedBgDark: 'bg-[#c0392b]/15 border-[#c0392b]/50 text-[#e8a89f]',
     checkedBgLight: 'bg-[#f7ddd6] border-[#c0392b] text-[#8f291e]',
-    // Mode clair : fond parchemin + cartes quasi-blanches → contraste net.
+    // Light mode: parchment ground, near-white cards, for contrast.
     rootBgDark: 'bg-[#221520] text-[#f3e7d8]',
     rootBgLight: 'bg-[#f5ead5] text-[#3d2817]',
     cardBgDark: 'bg-[#311f2d] border-[#4a3343]',
@@ -145,7 +145,7 @@ const ratatouilleTheme: ThemePlugin = {
   },
 };
 
-// Thème 6 : Mario (Nintendo / Pixel / Champignon)
+// Mario (Nintendo, pixel)
 const marioTheme: ThemePlugin = {
   id: 'mario',
   name: 'Mario',

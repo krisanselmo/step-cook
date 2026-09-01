@@ -1,25 +1,18 @@
 /**
- * Catalogue du matériel Thermomix.
- *
- * Ce module est volontairement pur (pas de React, pas d'icônes) : il est importé
- * aussi bien par l'UI que par les routes API Gemini, qui s'en servent pour
- * construire le pré-prompt décrivant le matériel réellement possédé.
+ * Deliberately pure (no React, no icons): imported by the UI and by the Gemini
+ * routes alike. Icons are resolved UI-side.
  */
 
 export interface EquipmentItem {
   id: string;
   name: string;
-  /** Une ligne d'explication affichée sous le nom dans la modale de config. */
+  /** Shown under the name in the config modal. */
   description: string;
-  /** Accessoire fourni d'origine avec le robot : coché par défaut. */
+  /** Shipped with the appliance, so ticked by default. */
   defaultOwned: boolean;
-  /** Formulation injectée dans le pré-prompt Gemini. */
+  /** Wording injected into the Gemini prompt. */
   promptHint: string;
-  /**
-   * Détection de l'accessoire dans le texte d'une étape. Le texte est normalisé
-   * (minuscules, sans accents) avant le test : les motifs s'écrivent donc sans
-   * accent.
-   */
+  /** Tested against normalised text, so patterns carry no accents. */
   pattern: RegExp;
 }
 
@@ -62,8 +55,7 @@ export const EQUIPMENT: EquipmentItem[] = [
     defaultOwned: true,
     promptHint:
       "Gobelet doseur : en place sur le couvercle par défaut. Ne le signale que lorsqu'il faut le RETIRER (laisser évaporer, réduire, éviter la surpression).",
-    // Seul le retrait vaut d'être signalé : le gobelet est en place le reste du
-    // temps, l'afficher partout n'apprendrait rien.
+    // Only removal is information: the cup is on the lid the rest of the time.
     pattern:
       /sans (le )?gobelet|(retirer|enlever|oter) le gobelet|gobelet (doseur )?(retire|enleve|ote)|couvercle sans gobelet/,
   },
@@ -131,16 +123,14 @@ export type CutterModeId =
 export interface CutterMode {
   id: CutterModeId;
   name: string;
-  /** Épaisseur / grain indicatif, affiché sous le nom du mode. */
+  /** Indicative thickness, shown under the mode name. */
   detail: string;
-  /** Vitesse conseillée pour ce mode. */
+  /** Recommended speed for this mode. */
   speed: string;
   pattern: RegExp;
 }
 
-/**
- * Les 4 modes du Découpe-minute (deux disques, chacun à double face).
- */
+/** Two double-sided discs, hence four modes. */
 export const CUTTER_MODES: CutterMode[] = [
   {
     id: 'tranches-fines',
@@ -172,7 +162,7 @@ export const CUTTER_MODES: CutterMode[] = [
   },
 ];
 
-/** Ids du matériel fourni d'origine, valeur par défaut de la configuration. */
+/** Default configuration: what ships with the appliance. */
 export const DEFAULT_EQUIPMENT_IDS: string[] = EQUIPMENT.filter(
   item => item.defaultOwned,
 ).map(item => item.id);
@@ -183,10 +173,7 @@ export const getEquipmentItem = (id: string): EquipmentItem | undefined =>
 export const getCutterMode = (id: string): CutterMode | undefined =>
   CUTTER_MODES.find(mode => mode.id === id);
 
-/**
- * Libellé d'un accessoire tel qu'affiché sur une étape. Le gobelet n'y apparaît
- * que retiré, d'où une formulation qui dit l'action plutôt que l'objet.
- */
+/** The cup only appears when removed, hence a label naming the action. */
 export const getAccessoryStepLabel = (accessory: {
   id: string;
   state?: string;
@@ -203,9 +190,8 @@ export const getAccessoryStepLabel = (accessory: {
 };
 
 /**
- * Nettoie une configuration venue du localStorage ou d'un appel API : ne garde
- * que des ids connus, sans doublon. Une valeur inexploitable retombe sur la
- * configuration par défaut, pour ne jamais laisser l'IA sans matériel.
+ * Keeps known ids only, deduplicated. An unusable value falls back to the
+ * defaults so the AI is never left without equipment.
  */
 export const sanitizeEquipmentIds = (value: unknown): string[] => {
   if (!Array.isArray(value)) {
@@ -220,11 +206,8 @@ export const sanitizeEquipmentIds = (value: unknown): string[] => {
 };
 
 /**
- * Bloc « matériel » du pré-prompt Gemini : ce dont l'utilisateur dispose, ce
- * qu'il n'a pas (et qui est donc interdit), et les consignes de rédaction des
- * accessoires qui ont une syntaxe propre.
- *
- * `ownedIds` absent (ancien client, appel direct) → configuration par défaut.
+ * What the user owns, what is therefore forbidden, and the wording rules for
+ * accessories with their own syntax. Absent `ownedIds` falls back to defaults.
  */
 export const buildEquipmentPromptBlock = (ownedIds?: unknown): string => {
   const owned = sanitizeEquipmentIds(ownedIds);

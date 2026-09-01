@@ -1,5 +1,4 @@
 import '@testing-library/jest-dom';
 
-// jsdom n'implémente pas scrollIntoView, utilisé par le panneau de chat pour
-// suivre les nouveaux messages.
+// jsdom has no scrollIntoView, which the chat panel calls on new messages.
 Element.prototype.scrollIntoView = jest.fn();

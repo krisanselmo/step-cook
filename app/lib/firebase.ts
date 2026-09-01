@@ -2,7 +2,7 @@ import admin from 'firebase-admin';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-/** Intégration optionnelle : sans service account, Firestore est absent, pas en panne. */
+/** Optional: without a service account Firestore is absent, not broken. */
 const isFirebaseConfigured = (): boolean =>
   !!(process.env.FIREBASE_SERVICE_ACCOUNT_PATH || process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
