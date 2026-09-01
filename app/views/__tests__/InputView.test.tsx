@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { InputView } from '../InputView';
 import { useCookingState } from '@/app/hooks/useCookingState';
+import { makeCookingState, mockTheme } from '@/test-utils/cookingState';
 
 // Mock the useCookingState hook
 jest.mock('@/app/hooks/useCookingState');
@@ -15,60 +16,16 @@ describe('InputView', () => {
   // Common props to pass to InputView for testing
   const isDarkMode = true;
 
+  // `handleGeminiGenerate` est une prop propre à InputView, absente de l'état du hook.
   const defaultProps = {
-    rawText: '',
-    setRawText: jest.fn(),
-    handleProcess: jest.fn(),
-    mealieRecipes: [],
-    isMealieLoading: false,
-    mealieError: null,
-    isMealieConfigured: true,
-    isFirestoreConfigured: true,
-    isGeminiConfigured: true,
-    searchTerm: '',
-    setSearchTerm: jest.fn(),
-    sortOption: 'date-desc' as const,
-    setSortOption: jest.fn(),
-    fetchMealieRecipes: jest.fn(),
-    loadMealieRecipe: jest.fn(),
-    isDarkMode,
-    setIsDarkMode: jest.fn(),
-    theme: {
-      id: 'default',
-      name: 'Default',
-      title: 'Step Cook',
-      icon: () => <svg data-testid="theme-icon" />,
-      properties: {
-        font: 'font-sans',
-        radius: 'rounded-xl',
-        buttonStyle: 'base',
-      },
-      colors: {
-        accent: 'text-blue-500',
-        accentDarker: 'text-blue-600',
-        bgPrimary: 'bg-blue-500',
-        bgPrimaryHover: 'hover:bg-blue-600',
-        borderAccent: 'border-blue-500',
-        shadowAccent: 'shadow-blue-500',
-        checkedBgDark: 'bg-gray-800',
-        checkedBgLight: 'bg-gray-100',
-        rootBgDark: 'bg-gray-950',
-        rootBgLight: 'bg-gray-50',
-        cardBgDark: 'bg-gray-900',
-        cardBgLight: 'bg-white',
-      },
-    },
-    setActiveThemeId: jest.fn(),
-    t: jest.fn((darkClass: string, lightClass: string) =>
-      isDarkMode ? darkClass : lightClass,
-    ),
+    ...makeCookingState({
+      isDarkMode,
+      theme: mockTheme,
+      t: jest.fn((darkClass: string, lightClass: string) =>
+        isDarkMode ? darkClass : lightClass,
+      ),
+    }),
     handleGeminiGenerate: jest.fn(),
-    savedRecipes: [],
-    isSavedLoading: false,
-    savedError: null,
-    fetchSavedRecipes: jest.fn(),
-    loadSavedRecipe: jest.fn(),
-    deleteSavedRecipe: jest.fn(),
   };
 
   beforeEach(() => {

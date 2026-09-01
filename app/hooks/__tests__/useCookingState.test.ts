@@ -2,6 +2,21 @@ import { renderHook, act } from '@testing-library/react';
 import { useCookingState } from '../useCookingState';
 import { Recipe } from '@/app/lib/types';
 
+/**
+ * Ne pilote que la route visée ; toute autre requête du montage renvoie une
+ * liste vide, pour que le test n'affirme que sur ce qu'il isole.
+ */
+const mockRouteOnce = (
+  route: string,
+  payload: unknown,
+  { ok = true }: { ok?: boolean } = {},
+) =>
+  (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
+    url === route
+      ? { ok, json: async () => payload }
+      : { ok: true, json: async () => [] },
+  );
+
 describe('useCookingState', () => {
   const MOCK_MEALIE_BASE_URL = 'http://test-mealie.com';
   const MOCK_RECIPE_SLUG = 'test-recipe-slug';
@@ -67,11 +82,7 @@ describe('useCookingState', () => {
 
   describe('intégrations optionnelles', () => {
     it('marque Firestore comme non configuré sans lever d\'erreur', async () => {
-      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
-        url === '/api/firestore/recipes'
-          ? { ok: true, json: async () => ({ configured: false }) }
-          : { ok: true, json: async () => [] },
-      );
+      mockRouteOnce('/api/firestore/recipes', ({ configured: false }));
 
       const { result } = await renderCookingHook();
 
@@ -81,11 +92,7 @@ describe('useCookingState', () => {
     });
 
     it('signale une vraie panne Firestore comme une erreur', async () => {
-      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
-        url === '/api/firestore/recipes'
-          ? { ok: false, json: async () => ({ error: 'boom' }) }
-          : { ok: true, json: async () => [] },
-      );
+      mockRouteOnce('/api/firestore/recipes', ({ error: 'boom' }), { ok: false });
 
       const { result } = await renderCookingHook();
 
@@ -96,11 +103,7 @@ describe('useCookingState', () => {
     });
 
     it('marque Gemini comme non configuré quand la clé est absente', async () => {
-      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
-        url === '/api/gemini/config'
-          ? { ok: true, json: async () => ({ configured: false }) }
-          : { ok: true, json: async () => [] },
-      );
+      mockRouteOnce('/api/gemini/config', ({ configured: false }));
 
       const { result } = await renderCookingHook();
 
@@ -109,11 +112,7 @@ describe('useCookingState', () => {
 
     it('laisse l\'IA visible si la config Gemini est injoignable', async () => {
       // Masquer l'IA sur une erreur réseau serait pire que la laisser échouer
-      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
-        url === '/api/gemini/config'
-          ? { ok: false, json: async () => ({}) }
-          : { ok: true, json: async () => [] },
-      );
+      mockRouteOnce('/api/gemini/config', ({}), { ok: false });
 
       const { result } = await renderCookingHook();
 
@@ -124,11 +123,7 @@ describe('useCookingState', () => {
   describe('intégration Mealie optionnelle', () => {
     it('marque Mealie comme non configuré sans lever d\'erreur', async () => {
       // Le proxy répond ainsi quand MEALIE_BASE_URL est absente du .env
-      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
-        url === '/api/mealie/recipes'
-          ? { ok: true, json: async () => ({ configured: false }) }
-          : { ok: true, json: async () => [] },
-      );
+      mockRouteOnce('/api/mealie/recipes', ({ configured: false }));
 
       const { result } = await renderCookingHook();
 
@@ -138,11 +133,7 @@ describe('useCookingState', () => {
     });
 
     it('signale une vraie panne Mealie comme une erreur', async () => {
-      (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
-        url === '/api/mealie/recipes'
-          ? { ok: false, json: async () => ({ error: 'boom' }) }
-          : { ok: true, json: async () => [] },
-      );
+      mockRouteOnce('/api/mealie/recipes', ({ error: 'boom' }), { ok: false });
 
       const { result } = await renderCookingHook();
 

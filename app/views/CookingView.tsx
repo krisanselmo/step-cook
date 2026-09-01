@@ -34,6 +34,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/Button';
+import { CloseButton } from '@/app/components/ui/CloseButton';
 import { ThemeDropdown } from '@/app/components/ui/ThemeDropdown';
 import { EquipmentModal, getEquipmentIcon } from '@/app/components/ui/EquipmentModal';
 import { StepAccessories } from '@/app/components/ui/StepAccessories';
@@ -793,13 +794,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             <h3 className="font-bold text-sm">Assistant IA</h3>
             <p className={`text-xs ${t('text-gray-500', 'text-gray-400')}`}>Questions et modifications</p>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Fermer"
-            className={`p-2 rounded-full ${t('hover:bg-gray-800', 'hover:bg-gray-100')}`}
-          >
-            <X size={18} />
-          </button>
+          <CloseButton onClose={onClose} t={t} />
         </div>
 
         {/* Messages */}

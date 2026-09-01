@@ -60,6 +60,16 @@ const openChat = async (page: import('@playwright/test').Page) => {
   await expect(page.getByText('Questions et modifications')).toBeVisible();
 };
 
+/** Demande une modification puis accepte la proposition renvoyée. */
+const proposeAndAccept = async (
+  page: import('@playwright/test').Page,
+  message: string,
+) => {
+  await openChat(page);
+  await ask(page, message);
+  await page.getByRole('button', { name: 'Appliquer' }).click();
+};
+
 const ask = async (page: import('@playwright/test').Page, message: string) => {
   await page
     .getByPlaceholder('Poser une question ou demander une modification...')
@@ -110,10 +120,7 @@ test('applique la proposition acceptée à la recette courante', async ({
   page,
 }) => {
   await mockAgent(page, proposeResponse);
-  await openChat(page);
-  await ask(page, 'Remplace le beurre');
-
-  await page.getByRole('button', { name: 'Appliquer' }).click();
+  await proposeAndAccept(page, 'Remplace le beurre');
   await expect(page.getByText('Modifications appliquées')).toBeVisible();
 
   await page.getByRole('button', { name: 'Fermer' }).click();
@@ -127,9 +134,7 @@ test('conserve les données structurées de la proposition appliquée', async ({
   page,
 }) => {
   await mockAgent(page, proposeResponse);
-  await openChat(page);
-  await ask(page, 'Remplace le beurre');
-  await page.getByRole('button', { name: 'Appliquer' }).click();
+  await proposeAndAccept(page, 'Remplace le beurre');
   await page.getByRole('button', { name: 'Fermer' }).click();
 
   // Étape 1 : réglages et ingrédients déclarés par l'agent, pas relus du texte.
@@ -160,9 +165,7 @@ test('propose sur une recette générée sans perdre son schéma', async ({
   await page.getByRole('button', { name: 'Générer Recette' }).click();
   await expect(page.getByRole('heading', { name: 'Ingrédients' })).toBeVisible();
 
-  await openChat(page);
-  await ask(page, 'Remplace la crème par du lait de coco');
-  await page.getByRole('button', { name: 'Appliquer' }).click();
+  await proposeAndAccept(page, 'Remplace la crème par du lait de coco');
   await page.getByRole('button', { name: 'Fermer' }).click();
 
   await expect(

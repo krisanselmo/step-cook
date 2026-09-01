@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/app/lib/firebase';
-import {
-  RECIPE_SCHEMA_VERSION,
-  isStructuredSchema,
-  normalizeSteps,
-} from '@/app/lib/utils';
+import { toRecipeDocument } from '../document';
 
 export async function GET(
   _request: Request,
@@ -58,19 +54,7 @@ export async function PUT(
     }
 
     const db = getDb();
-    await db.collection('recipes').doc(id).update({
-      title: recipe.title,
-      description: recipe.description || null,
-      prepTime: recipe.prepTime || null,
-      cookTime: recipe.cookTime || null,
-      totalTime: recipe.totalTime || null,
-      ingredients: recipe.ingredients || [],
-      steps: normalizeSteps(recipe.steps, {
-        structured: isStructuredSchema(recipe.schemaVersion),
-        ingredients: recipe.ingredients || [],
-      }),
-      schemaVersion: RECIPE_SCHEMA_VERSION,
-    });
+    await db.collection('recipes').doc(id).update(toRecipeDocument(recipe));
 
     return NextResponse.json({ message: 'Recette mise à jour' });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
 import { buildPrompt } from '@/app/api/gemini/prompt';
+import { getGeminiClient } from '@/app/api/gemini/client';
 import { RECIPE_SCHEMA } from '@/app/api/gemini/recipeSchema';
 import {
   RECIPE_SCHEMA_VERSION,
@@ -30,17 +30,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    const modelName = process.env.GEMINI_MODEL_NAME || 'gemini-2.5-flash';
+    const { ai, modelName, error } = getGeminiClient();
 
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'Gemini API key not configured.' },
-        { status: 500 },
-      );
+    if (error) {
+      return error;
     }
-
-    const ai = new GoogleGenAI({ apiKey });
 
     const response = await ai.models.generateContent({
       model: modelName,
