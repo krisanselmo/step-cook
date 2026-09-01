@@ -8,7 +8,7 @@ describe('useCookingState', () => {
   const MOCK_RECIPE: Recipe = {
     title: 'Test Recipe',
     ingredients: [],
-    steps: ['Step 1'],
+    steps: [{ text: 'Step 1' }],
     slug: MOCK_RECIPE_SLUG,
   };
 
@@ -157,7 +157,7 @@ describe('useCookingState', () => {
     const CHAT_RECIPE: Recipe = {
       title: 'Soupe',
       ingredients: [{ fullText: '50 g de beurre', keywords: ['beurre'] }],
-      steps: ['Faire fondre le beurre 2 min / 100°C / vitesse 1.'],
+      steps: [{ text: 'Faire fondre le beurre 2 min / 100°C / vitesse 1.' }],
     };
 
     // Le hook fetch Mealie + recettes sauvegardées au montage : on ne pilote que

@@ -37,8 +37,8 @@ import { Button } from '@/app/components/ui/Button';
 import { ThemeDropdown } from '@/app/components/ui/ThemeDropdown';
 import { EquipmentModal, getEquipmentIcon } from '@/app/components/ui/EquipmentModal';
 import { StepAccessories } from '@/app/components/ui/StepAccessories';
-import { detectStepAccessories } from '@/app/lib/utils';
-import { getEquipmentItem } from '@/app/lib/equipment';
+import { StepAccessory } from '@/app/lib/utils';
+import { getAccessoryStepLabel, getEquipmentItem } from '@/app/lib/equipment';
 import { useCookingState } from '@/app/hooks/useCookingState';
 
 interface CookingViewProps {
@@ -345,8 +345,8 @@ export const CookingView: React.FC<CookingViewProps> = ({
                         {i + 1}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-sm leading-relaxed ${t('text-gray-300', 'text-gray-600')}`}>{step}</p>
-                        <StepAccessoryTags step={step} theme={theme} t={t} />
+                        <p className={`text-sm leading-relaxed ${t('text-gray-300', 'text-gray-600')}`}>{step.text}</p>
+                        <StepAccessoryTags accessories={step.accessories} theme={theme} t={t} />
                       </div>
                     </div>
                   ))}
@@ -481,7 +481,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
               {/* Refactored font size class to avoid false positive linter error */}
               {(() => {
                 const stepFontSizeClass =
-                  recipe.steps[currentStep].length > 150
+                  recipe.steps[currentStep].text.length > 150
                     ? 'text-l md:text-2xl'
                     : 'text-2xl md:text-4xl';
 
@@ -489,7 +489,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
                   <p
                     className={`font-medium leading-normal mx-auto transition-colors ${stepFontSizeClass}`}
                   >
-                    {recipe.steps[currentStep]}
+                    {recipe.steps[currentStep].text}
                   </p>
                 );
               })()}
@@ -705,12 +705,10 @@ export const CookingView: React.FC<CookingViewProps> = ({
  * recette, pour repérer d'un coup d'œil celles qui demandent du matériel.
  */
 const StepAccessoryTags: React.FC<{
-  step: string;
+  accessories?: StepAccessory[];
   theme: ThemePlugin;
   t: (dark: string, light: string) => string;
-}> = ({ step, theme, t }) => {
-  const accessories = detectStepAccessories(step);
-
+}> = ({ accessories = [], theme, t }) => {
   if (accessories.length === 0) {
     return null;
   }
@@ -732,7 +730,7 @@ const StepAccessoryTags: React.FC<{
             className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full ${t('bg-gray-800 text-gray-400', 'bg-gray-100 text-gray-500')}`}
           >
             <Icon size={10} className={theme.colors.accent} />
-            {item.name}
+            {getAccessoryStepLabel(accessory)}
           </span>
         );
       })}

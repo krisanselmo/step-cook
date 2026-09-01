@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from '@google/genai';
 import { buildAgentPrompt } from './prompt';
+import { RECIPE_SCHEMA } from '@/app/api/gemini/recipeSchema';
+import {
+  RECIPE_SCHEMA_VERSION,
+  normalizeSteps,
+  parseIngredientLine,
+} from '@/app/lib/utils';
 
 /** Nombre de tours de conversation renvoyés au modèle (borne la taille du prompt). */
 const MAX_HISTORY_MESSAGES = 12;
@@ -9,20 +15,6 @@ interface HistoryMessage {
   role: 'user' | 'assistant';
   content: string;
 }
-
-const RECIPE_SCHEMA = {
-  type: Type.OBJECT,
-  properties: {
-    title: { type: Type.STRING },
-    description: { type: Type.STRING },
-    prepTime: { type: Type.STRING },
-    cookTime: { type: Type.STRING },
-    totalTime: { type: Type.STRING },
-    ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
-    steps: { type: Type.ARRAY, items: { type: Type.STRING } },
-  },
-  required: ['title', 'ingredients', 'steps'],
-};
 
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
@@ -133,13 +125,17 @@ export async function POST(req: NextRequest) {
     }
 
     const proposedRecipe = parsed.recipe;
+    const proposedIngredients = toCleanStringArray(proposedRecipe?.ingredients);
+    const proposedSteps = normalizeSteps(proposedRecipe?.steps, {
+      structured: true,
+      ingredients: proposedIngredients.map(parseIngredientLine),
+    });
     const hasUsableProposal =
       parsed.action === 'propose' &&
       !!proposedRecipe &&
       typeof proposedRecipe.title === 'string' &&
       isStringArray(proposedRecipe.ingredients) &&
-      isStringArray(proposedRecipe.steps) &&
-      proposedRecipe.steps.length > 0;
+      proposedSteps.length > 0;
 
     // Le modèle peut annoncer une proposition sans fournir de recette exploitable :
     // on retombe alors sur une simple réponse plutôt que d'échouer.
@@ -156,8 +152,9 @@ export async function POST(req: NextRequest) {
         prepTime: proposedRecipe.prepTime,
         cookTime: proposedRecipe.cookTime,
         totalTime: proposedRecipe.totalTime,
-        ingredients: toCleanStringArray(proposedRecipe.ingredients),
-        steps: toCleanStringArray(proposedRecipe.steps),
+        ingredients: proposedIngredients,
+        steps: proposedSteps,
+        schemaVersion: RECIPE_SCHEMA_VERSION,
       },
       changes: toCleanStringArray(parsed.changes),
     });

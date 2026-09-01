@@ -9,6 +9,7 @@ import {
   CUTTER_MODES,
   CutterModeId,
   VAROMA_ID,
+  getAccessoryStepLabel,
   getEquipmentItem,
 } from '@/app/lib/equipment';
 import { CutterDisc } from './CutterDisc';
@@ -221,7 +222,7 @@ export const StepAccessories: React.FC<StepAccessoriesProps> = ({
                 }`}
               >
                 <Icon size={14} className={isOwned ? theme.colors.accent : ''} />
-                {item.name}
+                {getAccessoryStepLabel(accessory)}
                 {!isOwned && <Settings2 size={12} />}
               </button>
             );

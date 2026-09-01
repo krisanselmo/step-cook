@@ -21,9 +21,9 @@ describe('CookingView', () => {
       { fullText: '2 Sugar', keywords: ['sugar'] },
     ],
     steps: [
-      'Step 1: Mix ingredients',
-      'Step 2: Cook for 5 min',
-      'Step 3: Serve warm',
+      { text: 'Step 1: Mix ingredients' },
+      { text: 'Step 2: Cook for 5 min' },
+      { text: 'Step 3: Serve warm' },
     ],
   };
 

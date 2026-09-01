@@ -1,4 +1,5 @@
 import { buildEquipmentPromptBlock } from '@/app/lib/equipment';
+import { ACCESSORIES_FIELD_INSTRUCTIONS } from '@/app/api/gemini/recipeSchema';
 
 /**
  * Prompt système de l'agent conversationnel.
@@ -34,9 +35,11 @@ CONSIGNES POUR UNE PROPOSITION :
 - Renvoie la recette COMPLÈTE modifiée (tous les ingrédients, toutes les étapes), pas seulement le diff.
 - Ne change que ce qui découle de la demande ; garde le reste identique mot pour mot.
 - Répercute les conséquences logiques : si une quantité change, ajuste les temps de cuisson concernés ; si un ingrédient disparaît, retire-le des étapes.
-- Garde la syntaxe Thermomix dans les étapes : temps ("30 sec", "5 min", "1 h"), température ("37°C", "100°C", "Varoma"), vitesse ("vitesse 3.5", "vitesse mijotage", "mode pétrin", "mode turbo"), et "sens inverse" si nécessaire.
+- Garde la syntaxe Thermomix dans le texte des étapes : temps ("30 sec", "5 min", "1 h"), température ("37°C", "100°C", "Varoma"), vitesse ("vitesse 3.5", "vitesse mijotage", "mode pétrin", "mode turbo"), et "sens inverse" si nécessaire — et tiens "settings" en cohérence avec ce texte.
 - N'introduis jamais un accessoire absent du matériel disponible ci-dessus. Si la recette actuelle en contient un, tu peux l'expliquer ou proposer de le remplacer, mais n'en ajoute pas de nouveau.
 - Remplis "changes" avec la liste précise et concise des différences, en numérotant les étapes touchées (ex : "Étape 3 : beurre remplacé par de l'huile d'olive").
+
+${ACCESSORIES_FIELD_INSTRUCTIONS}
 
 CONSIGNES DE STYLE :
 - Réponds toujours en français, de façon concise et directe (2 à 4 phrases maximum pour "reply").

@@ -7,6 +7,12 @@ import { defineConfig, devices } from '@playwright/test';
  * empaqueté par Playwright : les builds Playwright ne couvrent pas Ubuntu 26.04,
  * et Chrome est de toute façon présent sur les postes de dev.
  */
+// Port dédié aux tests : le 3000 par défaut de Next est le plus disputé des
+// ports de dev, et `reuseExistingServer` y ferait tourner la suite contre
+// l'application de quelqu'un d'autre sans le moindre avertissement.
+const PORT = Number(process.env.E2E_PORT ?? 4010);
+const BASE_URL = `http://localhost:${PORT}`;
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -14,7 +20,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'html' : 'list',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: BASE_URL,
     trace: 'on-first-retry',
     viewport: { width: 1280, height: 800 },
     // Le service worker de l'app est un passthrough qui rejouerait les fetch et
@@ -34,8 +40,8 @@ export default defineConfig({
   // On teste contre un build de production (`next start`), pas le serveur de dev :
   // évite l'indicateur de dev Next.js sur les captures et reflète le rendu réel.
   webServer: {
-    command: 'npm run build && npm run start',
-    url: 'http://localhost:3000',
+    command: `npm run build && npx next start -p ${PORT}`,
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },

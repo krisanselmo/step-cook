@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getDb, isFirebaseConfigured } from '@/app/lib/firebase';
 import { FieldValue } from 'firebase-admin/firestore';
+import {
+  RECIPE_SCHEMA_VERSION,
+  isStructuredSchema,
+  normalizeSteps,
+} from '@/app/lib/utils';
+
 
 export async function GET() {
   if (!isFirebaseConfigured()) {
@@ -53,7 +59,11 @@ export async function POST(request: Request) {
       cookTime: recipe.cookTime || null,
       totalTime: recipe.totalTime || null,
       ingredients: recipe.ingredients || [],
-      steps: recipe.steps,
+      steps: normalizeSteps(recipe.steps, {
+        structured: isStructuredSchema(recipe.schemaVersion),
+        ingredients: recipe.ingredients || [],
+      }),
+      schemaVersion: RECIPE_SCHEMA_VERSION,
       userPrompt: userPrompt || '',
       source: 'gemini',
       createdAt: FieldValue.serverTimestamp(),

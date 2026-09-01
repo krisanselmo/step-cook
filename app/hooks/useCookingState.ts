@@ -15,11 +15,10 @@ import { defaultTheme, THEMES } from '@/app/lib/themes';
 import {
   parseRecipe,
   parseIngredientLine,
-  cleanStepText,
-  extractStepParams,
-  detectStepAccessories,
+  EMPTY_STEP_PARAMS,
+  normalizeSteps,
+  isStructuredSchema,
   formatMealieToText,
-  isKeywordInText,
   StepAccessory,
 } from '@/app/lib/utils';
 import {
@@ -393,8 +392,12 @@ export const useCookingState = (): UseCookingState => {
         cookTime: data.cookTime,
         totalTime: data.totalTime,
         ingredients: data.ingredients || [],
-        steps: data.steps || [],
+        steps: normalizeSteps(data.steps, {
+          structured: isStructuredSchema(data.schemaVersion),
+          ingredients: data.ingredients || [],
+        }),
         firestoreId: data.id,
+        schemaVersion: data.schemaVersion,
       };
 
       setRecipe(loadedRecipe);
@@ -482,8 +485,10 @@ export const useCookingState = (): UseCookingState => {
 
   useEffect(() => {
     if (recipe && currentStep >= 0 && currentStep < recipe.steps.length) {
-      const stepText = recipe.steps[currentStep];
-      const params = extractStepParams(stepText);
+      const step = recipe.steps[currentStep];
+      // Réglages résolus au parsing : déclarés par le modèle en schéma 2,
+      // extraits du texte en schéma 1. Rien n'est relu ici.
+      const params = step.params ?? EMPTY_STEP_PARAMS;
 
       setStepParams(params);
 
@@ -495,22 +500,17 @@ export const useCookingState = (): UseCookingState => {
         setIsTimerRunning(false);
       }
 
-      const matchedIngredients = recipe.ingredients.filter(
-        ing =>
-          ing.keywords.length > 0 &&
-          ing.keywords.some(keyword => isKeywordInText(keyword, stepText)),
-      );
+      // Les ingrédients de l'étape sont résolus en amont (déclarés par le
+      // modèle, ou déduits du texte pour les recettes en schéma 1) : ici on ne
+      // fait que retrouver les objets correspondants.
+      const stepIngredientTexts = new Set(step.ingredients ?? []);
 
-      setStepIngredients(matchedIngredients);
-      setStepAccessories(detectStepAccessories(stepText, params.temp));
+      setStepIngredients(
+        recipe.ingredients.filter(ing => stepIngredientTexts.has(ing.fullText)),
+      );
+      setStepAccessories(step.accessories ?? []);
     } else {
-      setStepParams({
-        time: '--:--',
-        temp: '---',
-        speed: '---',
-        seconds: 0,
-        reverse: false,
-      });
+      setStepParams(EMPTY_STEP_PARAMS);
       setStepIngredients([]);
       setStepAccessories([]);
     }
@@ -583,6 +583,11 @@ export const useCookingState = (): UseCookingState => {
       // Une proposition porte la recette complète modifiée : on la prépare tout de
       // suite (mots-clés des ingrédients, notation Thermomix) pour que « Appliquer »
       // se réduise à un remplacement d'état.
+      const proposedIngredients =
+        data.action === 'propose' && Array.isArray(data.recipe?.ingredients)
+          ? data.recipe.ingredients.map((ing: string) => parseIngredientLine(ing))
+          : recipe.ingredients;
+
       const proposedRecipe =
         data.action === 'propose' && data.recipe
           ? {
@@ -592,12 +597,14 @@ export const useCookingState = (): UseCookingState => {
             prepTime: data.recipe.prepTime,
             cookTime: data.recipe.cookTime,
             totalTime: data.recipe.totalTime,
-            ingredients: Array.isArray(data.recipe.ingredients)
-              ? data.recipe.ingredients.map((ing: string) => parseIngredientLine(ing))
-              : recipe.ingredients,
+            ingredients: proposedIngredients,
             steps: Array.isArray(data.recipe.steps)
-              ? data.recipe.steps.map((step: string) => cleanStepText(step))
+              ? normalizeSteps(data.recipe.steps, {
+                structured: true,
+                ingredients: proposedIngredients,
+              })
               : recipe.steps,
+            schemaVersion: data.recipe.schemaVersion ?? recipe.schemaVersion,
           }
           : null;
 
@@ -728,10 +735,26 @@ export const useCookingState = (): UseCookingState => {
         throw new Error(errorData.error || 'Erreur génération Gemini.');
       }
 
-      const data = await res.json();
-      const generatedText = data.generatedRecipeText;
-      setRawText(generatedText);
-      const parsedRecipe = parseRecipe(generatedText);
+      // La route renvoie une recette déjà structurée et validée (sortie JSON
+      // native de Gemini) : rien à parser ici.
+      const { recipe: generated } = await res.json();
+      const generatedIngredients = (generated.ingredients || []).map(
+        (ing: string) => parseIngredientLine(ing),
+      );
+      const parsedRecipe: Recipe = {
+        title: generated.title,
+        description: generated.description,
+        prepTime: generated.prepTime,
+        cookTime: generated.cookTime,
+        totalTime: generated.totalTime,
+        ingredients: generatedIngredients,
+        steps: normalizeSteps(generated.steps, {
+          structured: true,
+          ingredients: generatedIngredients,
+        }),
+        schemaVersion: generated.schemaVersion,
+      };
+
       setRecipe(parsedRecipe);
       setCheckedIngredients(new Set());
       setChatMessages([]);

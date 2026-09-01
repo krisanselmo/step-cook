@@ -25,6 +25,7 @@ export interface EquipmentItem {
 
 export const VAROMA_ID = 'varoma';
 export const CUTTER_ID = 'decoupe-minute';
+export const GOBELET_ID = 'gobelet-doseur';
 
 export const EQUIPMENT: EquipmentItem[] = [
   {
@@ -55,13 +56,16 @@ export const EQUIPMENT: EquipmentItem[] = [
     pattern: /\bfouet\b|papillon/,
   },
   {
-    id: 'gobelet-doseur',
+    id: GOBELET_ID,
     name: 'Gobelet doseur',
     description: 'Doser les liquides et fermer le bol',
     defaultOwned: true,
     promptHint:
-      'Gobelet doseur : dosage des liquides et fermeture du bol (à retirer pour laisser évaporer).',
-    pattern: /gobelet/,
+      "Gobelet doseur : en place sur le couvercle par défaut. Ne le signale que lorsqu'il faut le RETIRER (laisser évaporer, réduire, éviter la surpression).",
+    // Seul le retrait vaut d'être signalé : le gobelet est en place le reste du
+    // temps, l'afficher partout n'apprendrait rien.
+    pattern:
+      /sans (le )?gobelet|(retirer|enlever|oter) le gobelet|gobelet (doseur )?(retire|enleve|ote)|couvercle sans gobelet/,
   },
   {
     id: 'spatule',
@@ -178,6 +182,25 @@ export const getEquipmentItem = (id: string): EquipmentItem | undefined =>
 
 export const getCutterMode = (id: string): CutterMode | undefined =>
   CUTTER_MODES.find(mode => mode.id === id);
+
+/**
+ * Libellé d'un accessoire tel qu'affiché sur une étape. Le gobelet n'y apparaît
+ * que retiré, d'où une formulation qui dit l'action plutôt que l'objet.
+ */
+export const getAccessoryStepLabel = (accessory: {
+  id: string;
+  state?: string;
+}): string => {
+  const item = getEquipmentItem(accessory.id);
+
+  if (!item) {
+    return accessory.id;
+  }
+
+  return accessory.id === GOBELET_ID && accessory.state === 'removed'
+    ? 'Retirer le gobelet'
+    : item.name;
+};
 
 /**
  * Nettoie une configuration venue du localStorage ou d'un appel API : ne garde

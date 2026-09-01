@@ -1,6 +1,24 @@
-import { Ingredient, StepParams, Recipe, MealieRecipeDetail } from './types';
+import {
+  Ingredient,
+  StepParams,
+  Recipe,
+  RecipeStep,
+  StepAccessory,
+  StepSettings,
+  MealieRecipeDetail,
+} from './types';
 import { distance } from 'fastest-levenshtein';
-import { CUTTER_ID, CUTTER_MODES, EQUIPMENT, VAROMA_ID } from './equipment';
+import {
+  CUTTER_ID,
+  CUTTER_MODES,
+  EQUIPMENT,
+  GOBELET_ID,
+  VAROMA_ID,
+  getCutterMode,
+  getEquipmentItem,
+} from './equipment';
+
+export type { RecipeStep, StepAccessory };
 
 const normalizeText = (text: string): string => {
   return text
@@ -272,17 +290,99 @@ export const extractStepParams = (text: string): StepParams => {
   return { time, temp, speed, seconds, reverse };
 };
 
-/** Accessoire requis par une étape, tel que détecté dans son texte. */
-export interface StepAccessory {
-  /** Id d'un `EquipmentItem` du catalogue. */
-  id: string;
-  /** Mode de coupe, uniquement pour le Découpe-minute (absent si non précisé). */
-  cutterMode?: string;
-}
+export const EMPTY_STEP_PARAMS: StepParams = {
+  time: '--:--',
+  temp: '---',
+  speed: '---',
+  seconds: 0,
+  reverse: false,
+};
+
+/** Durée en secondes → affichage du cadran ("00:45", "05:00", "1:00:00"). */
+const formatStepTime = (seconds: number): string => {
+  if (seconds <= 0) {
+    return EMPTY_STEP_PARAMS.time;
+  }
+
+  if (seconds < 60) {
+    return `00:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  if (seconds < 3600) {
+    return `${Math.round(seconds / 60).toString().padStart(2, '0')}:00`;
+  }
+
+  return `${Math.floor(seconds / 3600)}:00:00`;
+};
+
+/** Vitesses nommées du robot → code affiché sur le cadran. */
+const NAMED_SPEEDS: Record<string, string> = {
+  mijotage: 'MIJOT',
+  petrin: 'EPI',
+  epi: 'EPI',
+  turbo: 'TURBO',
+};
+
+/**
+ * Réglages déclarés (schéma 2) → valeurs d'affichage.
+ *
+ * Aucune lecture du texte de l'étape ici : ce que le modèle n'a pas déclaré
+ * n'existe pas.
+ *
+ * Accepte aussi un `StepParams` déjà résolu (`temp` au lieu de `temperature`),
+ * pour qu'une recette relue depuis Firestore repasse par ici sans se dégrader.
+ */
+export const resolveStepSettings = (value: unknown): StepParams => {
+  const declared = (value || {}) as StepSettings & { temp?: string };
+
+  const seconds =
+    typeof declared.seconds === 'number' &&
+    Number.isFinite(declared.seconds) &&
+    declared.seconds > 0
+      ? Math.round(declared.seconds)
+      : 0;
+
+  const rawTemp = (declared.temperature ?? declared.temp ?? '').trim();
+  const temp = !rawTemp
+    ? EMPTY_STEP_PARAMS.temp
+    : normalizeText(rawTemp).includes('varoma')
+      ? 'VAROMA'
+      : `${rawTemp.replace(/[^\d]/g, '')}°C`;
+
+  const rawSpeed = (declared.speed || '').trim();
+  const normalizedSpeed = normalizeText(rawSpeed);
+  // "aucune" est la façon dont le modèle dit « le robot ne tourne pas » : le
+  // champ est obligatoire, il faut bien qu'il puisse répondre ça.
+  const speed =
+    !rawSpeed || normalizedSpeed === 'aucune'
+      ? EMPTY_STEP_PARAMS.speed
+      : (NAMED_SPEEDS[normalizedSpeed] ?? rawSpeed);
+
+  return {
+    time: formatStepTime(seconds),
+    // Une température vide mais mal formée ("°C" seul) ne vaut rien.
+    temp: temp === '°C' ? EMPTY_STEP_PARAMS.temp : temp,
+    speed,
+    seconds,
+    // Le pétrin n'a pas de sens inverse, comme dans l'extraction texte.
+    reverse: declared.reverse === true && speed !== 'EPI',
+  };
+};
+
+/** Une étape sans minuteur, sans température, sans vitesse : rien à afficher. */
+const hasStepParams = (params: StepParams): boolean =>
+  params.seconds > 0 ||
+  params.temp !== EMPTY_STEP_PARAMS.temp ||
+  params.speed !== EMPTY_STEP_PARAMS.speed ||
+  params.reverse;
 
 /**
  * Repère les accessoires mentionnés dans une étape, pour afficher un visuel
  * dédié pendant la cuisson.
+ *
+ * Heuristique réservée aux recettes qui n'arrivent que sous forme de texte
+ * (Mealie, copier-coller manuel) : les recettes générées déclarent leurs
+ * accessoires dans le JSON, sans passer par ces motifs.
  *
  * `temp` (issue d'`extractStepParams`) permet d'attraper le Varoma quand il
  * n'apparaît que comme température, sans être nommé dans la phrase.
@@ -308,12 +408,219 @@ export const detectStepAccessories = (
       const mode = CUTTER_MODES.find(m => m.pattern.test(normalized));
 
       accessories.push({ id: item.id, cutterMode: mode?.id });
+    } else if (item.id === GOBELET_ID) {
+      // Le motif du gobelet ne matche que son retrait (cf. catalogue).
+      accessories.push({ id: item.id, state: 'removed' });
     } else {
       accessories.push({ id: item.id });
     }
   }
 
   return accessories;
+};
+
+/**
+ * Ne garde que les accessoires connus du catalogue, sans doublon. Un id inventé
+ * par le modèle, ou un mode de coupe sur autre chose que le Découpe-minute, est
+ * écarté plutôt que propagé jusqu'à l'UI.
+ */
+export const sanitizeStepAccessories = (value: unknown): StepAccessory[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const accessories: StepAccessory[] = [];
+
+  for (const raw of value) {
+    const id =
+      typeof raw === 'string'
+        ? raw
+        : typeof (raw as StepAccessory)?.id === 'string'
+          ? (raw as StepAccessory).id
+          : undefined;
+
+    if (!id || !getEquipmentItem(id) || seen.has(id)) {
+      continue;
+    }
+
+    // Le gobelet est en place par défaut : une étape qui le « demande » sans
+    // préciser son retrait n'apprend rien, on l'écarte.
+    if (id === GOBELET_ID) {
+      if ((raw as StepAccessory)?.state !== 'removed') {
+        continue;
+      }
+
+      seen.add(id);
+      accessories.push({ id, state: 'removed' });
+      continue;
+    }
+
+    seen.add(id);
+
+    const mode =
+      id === CUTTER_ID ? (raw as StepAccessory)?.cutterMode : undefined;
+
+    accessories.push(
+      mode && getCutterMode(mode) ? { id, cutterMode: mode } : { id },
+    );
+  }
+
+  return accessories;
+};
+
+/**
+ * Version courante du schéma de recette.
+ *
+ * 1 (ou absent) — étapes en texte brut : accessoires et ingrédients sont
+ *   déduits du texte par heuristique. C'est la forme des recettes
+ *   sauvegardées avant la sortie structurée, et la seule possible pour Mealie
+ *   et le copier-coller manuel.
+ * 2 — étapes structurées : l'étape déclare ses accessoires et ses ingrédients,
+ *   on lui fait confiance et aucune heuristique ne tourne.
+ */
+export const RECIPE_SCHEMA_VERSION = 2;
+
+/** Une version absente vaut 1 : les recettes d'avant le schéma structuré. */
+export const isStructuredSchema = (schemaVersion?: unknown): boolean =>
+  typeof schemaVersion === 'number' && schemaVersion >= 2;
+
+/**
+ * En mode structuré, `ingredients` est obligatoire : les étapes référencent les
+ * ingrédients par leur libellé, et sans la liste pour les résoudre ils seraient
+ * silencieusement perdus. Le typage force l'appelant à la fournir.
+ */
+export type NormalizeStepsOptions =
+  | { structured: true; ingredients: Ingredient[] }
+  | { structured?: false; ingredients?: Ingredient[] };
+
+/**
+ * Ramène des étapes de provenance quelconque au type `RecipeStep`.
+ *
+ * En mode structuré les déclarations du modèle font foi ; sinon accessoires et
+ * ingrédients sont déduits du texte. Les `string[]` restent acceptés : c'est la
+ * forme des recettes en schéma 1 et celle du parsing texte.
+ */
+export const normalizeSteps = (
+  value: unknown,
+  options: NormalizeStepsOptions = {},
+): RecipeStep[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const { ingredients = [], structured = false } = options;
+
+  return value
+    .map((raw): RecipeStep | null => {
+      if (typeof raw === 'string') {
+        return buildTextStep(raw, ingredients);
+      }
+
+      const rawText = (raw as RecipeStep)?.text;
+
+      if (typeof rawText !== 'string' || rawText.trim() === '') {
+        return null;
+      }
+
+      if (!structured) {
+        return buildTextStep(rawText, ingredients);
+      }
+
+      // Schéma 2 : aucune heuristique. Ce que le modèle n'a pas déclaré est
+      // simplement absent — on n'ira pas le chercher dans la prose.
+      return withOptionalFields(cleanStepText(rawText), {
+        accessories: sanitizeStepAccessories((raw as RecipeStep).accessories),
+        ingredients: resolveDeclaredIngredients(
+          (raw as RecipeStep).ingredients,
+          ingredients,
+        ),
+        params: resolveStepSettings(
+          (raw as { settings?: unknown }).settings ??
+            (raw as RecipeStep).params,
+        ),
+      });
+    })
+    .filter((step): step is RecipeStep => step !== null);
+};
+
+/**
+ * Résout les ingrédients déclarés par une étape contre ceux de la recette, par
+ * égalité normalisée (casse, accents, espaces).
+ *
+ * Un libellé qui ne correspond à rien est écarté : mieux vaut ne rien afficher
+ * qu'un ingrédient inventé. Le même ingrédient peut être réclamé par plusieurs
+ * étapes — c'est une référence, pas une consommation.
+ */
+const resolveDeclaredIngredients = (
+  declared: unknown,
+  ingredients: Ingredient[],
+): string[] => {
+  if (!Array.isArray(declared) || ingredients.length === 0) {
+    return [];
+  }
+
+  const byNormalized = new Map(
+    ingredients.map(ing => [normalizeText(ing.fullText).trim(), ing.fullText]),
+  );
+  const resolved: string[] = [];
+
+  for (const label of declared) {
+    if (typeof label !== 'string') {
+      continue;
+    }
+
+    const match = byNormalized.get(normalizeText(label).trim());
+
+    if (match && !resolved.includes(match)) {
+      resolved.push(match);
+    }
+  }
+
+  return resolved;
+};
+
+/** Ingrédients de la recette mentionnés dans le texte de l'étape (schéma 1). */
+const matchIngredientsInText = (
+  text: string,
+  ingredients: Ingredient[],
+): string[] =>
+  ingredients
+    .filter(
+      ing =>
+        ing.keywords.length > 0 &&
+        ing.keywords.some(keyword => isKeywordInText(keyword, text)),
+    )
+    .map(ing => ing.fullText);
+
+/** N'ajoute les champs optionnels au `RecipeStep` que s'ils portent quelque chose. */
+const withOptionalFields = (
+  text: string,
+  fields: {
+    accessories: StepAccessory[];
+    ingredients: string[];
+    params: StepParams;
+  },
+): RecipeStep => ({
+  text,
+  ...(fields.accessories.length > 0 ? { accessories: fields.accessories } : {}),
+  ...(fields.ingredients.length > 0 ? { ingredients: fields.ingredients } : {}),
+  ...(hasStepParams(fields.params) ? { params: fields.params } : {}),
+});
+
+/**
+ * Étape issue de texte libre : réglages, accessoires et ingrédients sont
+ * extraits du texte, faute d'être déclarés.
+ */
+const buildTextStep = (raw: string, ingredients: Ingredient[]): RecipeStep => {
+  const text = cleanStepText(raw);
+  const params = extractStepParams(text);
+
+  return withOptionalFields(text, {
+    accessories: detectStepAccessories(text, params.temp),
+    ingredients: matchIngredientsInText(text, ingredients),
+    params,
+  });
 };
 
 // Fonction utilitaire pour nettoyer le texte des étapes (gestion des //)
@@ -350,26 +657,35 @@ export const parseRecipe = (
   metadata?: RecipeMetadata,
 ): Recipe => {
   try {
-    const trimmedInput = input.trim();
+    // Un bloc ```json entoure parfois la réponse d'un modèle : on le retire
+    // plutôt que de retomber sur le parsing texte, qui prendrait la clôture du
+    // fence pour un titre et chaque ligne de JSON pour une étape.
+    const trimmedInput = input
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/```$/, '')
+      .trim();
 
     if (trimmedInput.startsWith('{') && trimmedInput.endsWith('}')) {
       const jsonRecipe = JSON.parse(trimmedInput);
+      const ingredients: Ingredient[] = Array.isArray(jsonRecipe.ingredients)
+        ? jsonRecipe.ingredients.map((ing: string) => parseIngredientLine(ing))
+        : [];
+      const structured = isStructuredSchema(jsonRecipe.schemaVersion);
+      const steps = normalizeSteps(jsonRecipe.steps, { ingredients, structured });
 
-      if (jsonRecipe.title && Array.isArray(jsonRecipe.steps)) {
+      if (jsonRecipe.title && steps.length > 0) {
         return {
           title: jsonRecipe.title,
           description: jsonRecipe.description || metadata?.description,
           prepTime: jsonRecipe.prepTime || metadata?.prepTime,
           cookTime: jsonRecipe.cookTime || metadata?.cookTime,
           totalTime: jsonRecipe.totalTime || metadata?.totalTime,
-          ingredients: Array.isArray(jsonRecipe.ingredients)
-            ? jsonRecipe.ingredients.map((ing: string) =>
-                parseIngredientLine(ing),
-              )
-            : [],
-          steps: jsonRecipe.steps.map((step: string) => corrigerInstructionsThermomix(step)),
+          ingredients,
+          steps,
           slug,
           orgURL,
+          ...(structured ? { schemaVersion: jsonRecipe.schemaVersion } : {}),
         };
       }
     }
@@ -451,7 +767,7 @@ export const parseRecipe = (
     cookTime: metadata?.cookTime,
     totalTime: metadata?.totalTime,
     ingredients,
-    steps,
+    steps: normalizeSteps(steps, { ingredients }),
     slug,
     orgURL,
   };

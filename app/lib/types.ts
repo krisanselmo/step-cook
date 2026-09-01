@@ -5,12 +5,59 @@ export interface Ingredient {
   keywords: string[];
 }
 
+/** Réglages d'une étape, prêts pour l'affichage (cadrans + minuteur). */
 export interface StepParams {
   time: string;
   temp: string;
   speed: string;
   seconds: number;
   reverse: boolean;
+}
+
+/**
+ * Réglages bruts tels que déclarés par le modèle (schéma 2). Les valeurs
+ * d'affichage de `StepParams` en sont dérivées, jamais l'inverse.
+ */
+export interface StepSettings {
+  /** Durée totale en secondes. Absent ou 0 = pas de minuteur. */
+  seconds?: number;
+  /** Température en °C ("100") ou "Varoma". */
+  temperature?: string;
+  /** "0.5" à "10", ou "mijotage" / "petrin" / "turbo". */
+  speed?: string;
+  reverse?: boolean;
+}
+
+/**
+ * Accessoire réclamé par une étape.
+ *
+ * `cutterMode` n'a de sens que pour le Découpe-minute, `state` que pour le
+ * gobelet doseur — en place par défaut, seul son retrait vaut d'être signalé.
+ */
+export interface StepAccessory {
+  id: string;
+  cutterMode?: string;
+  state?: 'in-place' | 'removed';
+}
+
+/**
+ * Une étape de recette.
+ *
+ * `accessories` et `ingredients` sont renseignés à la source : déclarés par le
+ * modèle pour les recettes générées (schéma JSON structuré), déduits du texte
+ * pour celles qui n'arrivent que sous cette forme (Mealie, copier-coller
+ * manuel). Voir `RECIPE_SCHEMA_VERSION`.
+ *
+ * `ingredients` contient les `fullText` des ingrédients de la recette utilisés
+ * par l'étape, déjà résolus contre `Recipe.ingredients` : l'UI n'a plus qu'à
+ * les lire.
+ */
+export interface RecipeStep {
+  text: string;
+  accessories?: StepAccessory[];
+  ingredients?: string[];
+  /** Réglages résolus (déclarés en schéma 2, extraits du texte en schéma 1). */
+  params?: StepParams;
 }
 
 export interface Recipe {
@@ -20,10 +67,12 @@ export interface Recipe {
   cookTime?: string;
   totalTime?: string;
   ingredients: Ingredient[];
-  steps: string[];
+  steps: RecipeStep[];
   slug?: string;
   orgURL?: string;
   firestoreId?: string;
+  /** Absent = 1 (étapes en texte brut). Voir `RECIPE_SCHEMA_VERSION`. */
+  schemaVersion?: number;
 }
 
 export interface SavedRecipeSummary {
