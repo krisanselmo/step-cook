@@ -39,6 +39,7 @@ export default function Home() {
     chatMessages,
     isChatLoading,
     sendChatMessage,
+    retryChatMessage,
     applyProposal,
     rejectProposal,
     saveChatRecipe,
@@ -143,6 +144,7 @@ export default function Home() {
           chatMessages={chatMessages}
           isChatLoading={isChatLoading}
           sendChatMessage={sendChatMessage}
+          retryChatMessage={retryChatMessage}
           applyProposal={applyProposal}
           rejectProposal={rejectProposal}
           saveChatRecipe={saveChatRecipe}

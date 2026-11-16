@@ -32,6 +32,7 @@ import {
   Save,
   AlertTriangle,
   Wrench,
+  Copy,
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/Button';
 import { CloseButton } from '@/app/components/ui/CloseButton';
@@ -62,6 +63,7 @@ interface CookingViewProps {
   chatMessages: ReturnType<typeof useCookingState>['chatMessages'];
   isChatLoading: ReturnType<typeof useCookingState>['isChatLoading'];
   sendChatMessage: ReturnType<typeof useCookingState>['sendChatMessage'];
+  retryChatMessage: ReturnType<typeof useCookingState>['retryChatMessage'];
   applyProposal: ReturnType<typeof useCookingState>['applyProposal'];
   rejectProposal: ReturnType<typeof useCookingState>['rejectProposal'];
   saveChatRecipe: ReturnType<typeof useCookingState>['saveChatRecipe'];
@@ -120,6 +122,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
   chatMessages,
   isChatLoading,
   sendChatMessage,
+  retryChatMessage,
   applyProposal,
   rejectProposal,
   saveChatRecipe,
@@ -594,6 +597,7 @@ export const CookingView: React.FC<CookingViewProps> = ({
           chatMessages={chatMessages}
           isChatLoading={isChatLoading}
           sendChatMessage={sendChatMessage}
+          retryChatMessage={retryChatMessage}
           applyProposal={applyProposal}
           rejectProposal={rejectProposal}
           saveChatRecipe={saveChatRecipe}
@@ -787,6 +791,7 @@ interface ChatPanelProps {
   chatMessages: ChatMessage[];
   isChatLoading: boolean;
   sendChatMessage: (message: string) => Promise<void>;
+  retryChatMessage: (errorMessageId: string) => Promise<void>;
   applyProposal: (messageId: string) => void;
   rejectProposal: (messageId: string) => void;
   saveChatRecipe: () => Promise<void>;
@@ -801,6 +806,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   chatMessages,
   isChatLoading,
   sendChatMessage,
+  retryChatMessage,
   applyProposal,
   rejectProposal,
   saveChatRecipe,
@@ -867,6 +873,15 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                     t={t}
                   />
                 )}
+                {msg.isError && msg.failedMessage && (
+                  <ChatErrorActions
+                    message={msg}
+                    onRetry={() => retryChatMessage(msg.id)}
+                    retryDisabled={isChatLoading}
+                    theme={theme}
+                    t={t}
+                  />
+                )}
               </div>
             </div>
           ))}
@@ -917,6 +932,75 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   );
 };
 
+/** `navigator.clipboard` only exists on HTTPS/localhost; the app is often opened over LAN. */
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+
+      return true;
+    }
+
+    const textarea = document.createElement('textarea');
+
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    const ok = document.execCommand('copy');
+
+    document.body.removeChild(textarea);
+
+    return ok;
+  } catch {
+    return false;
+  }
+};
+
+interface ChatErrorActionsProps {
+  message: ChatMessage;
+  onRetry: () => void;
+  retryDisabled: boolean;
+  theme: ThemePlugin;
+  t: (dark: string, light: string) => string;
+}
+
+const ChatErrorActions: React.FC<ChatErrorActionsProps> = ({
+  message,
+  onRetry,
+  retryDisabled,
+  theme,
+  t,
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const text = [
+      `Message : ${message.failedMessage}`,
+      `Erreur : ${message.errorDetail ?? message.content}`,
+    ].join('\n');
+
+    if (await copyToClipboard(text)) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const buttonClass = `flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ${theme.properties.radius} transition-colors disabled:opacity-50 ${t('bg-red-900/40 text-red-200 hover:bg-red-900/60 border border-red-800', 'bg-white text-red-700 hover:bg-red-100 border border-red-200')}`;
+
+  return (
+    <div className="flex flex-wrap gap-2 mt-2">
+      <button onClick={onRetry} disabled={retryDisabled} className={buttonClass}>
+        <RotateCw size={13} /> Réessayer
+      </button>
+      <button onClick={handleCopy} className={buttonClass}>
+        {copied ? <><Check size={13} /> Copié</> : <><Copy size={13} /> Copier</>}
+      </button>
+    </div>
+  );
+};
 
 // Proposal card: human validation before anything is applied.
 interface ProposalCardProps {

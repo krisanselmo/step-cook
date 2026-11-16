@@ -65,6 +65,7 @@ interface UseCookingState {
   chatMessages: ChatMessage[];
   isChatLoading: boolean;
   sendChatMessage: (message: string) => Promise<void>;
+  retryChatMessage: (errorMessageId: string) => Promise<void>;
   applyProposal: (messageId: string) => void;
   rejectProposal: (messageId: string) => void;
   saveChatRecipe: () => Promise<void>;
@@ -536,16 +537,22 @@ export const useCookingState = (): UseCookingState => {
 
   // A proposal is never applied on its own: it waits for applyProposal /
   // rejectProposal.
-  const sendChatMessage = async (message: string) => {
+  const runChatExchange = async (message: string, previous: ChatMessage[]) => {
     if (!recipe || isChatLoading) {return;}
 
-    const history = chatMessages.map(({ role, content }) => ({ role, content }));
+    // A failed exchange (the error and the message that caused it) never
+    // reached the agent: replaying it would only confuse the conversation.
+    const history = previous
+      .filter((msg, i) => !msg.isError && !previous[i + 1]?.isError)
+      .map(({ role, content }) => ({ role, content }));
 
-    setChatMessages(prev => [
-      ...prev,
+    setChatMessages([
+      ...previous,
       { id: createMessageId(), role: 'user', content: message },
     ]);
     setIsChatLoading(true);
+
+    let errorDetail: string | undefined;
 
     try {
       const res = await fetch('/api/gemini/chat', {
@@ -555,6 +562,9 @@ export const useCookingState = (): UseCookingState => {
       });
 
       if (!res.ok) {
+        const body = await res.json().catch(() => null);
+
+        errorDetail = `HTTP ${res.status}${body?.detail ? ` - ${body.detail}` : ''}`;
         throw new Error('Erreur assistant');
       }
 
@@ -612,11 +622,32 @@ export const useCookingState = (): UseCookingState => {
           role: 'assistant',
           content: "Erreur lors de l'échange avec l'assistant.",
           isError: true,
+          failedMessage: message,
+          errorDetail:
+            errorDetail ?? (err instanceof Error ? err.message : String(err)),
         },
       ]);
     } finally {
       setIsChatLoading(false);
     }
+  };
+
+  const sendChatMessage = (message: string) => runChatExchange(message, chatMessages);
+
+  /** Replays a failed exchange in place of its error bubble. */
+  const retryChatMessage = async (errorMessageId: string) => {
+    const index = chatMessages.findIndex(msg => msg.id === errorMessageId);
+    const failed = chatMessages[index];
+
+    if (!failed?.failedMessage) {return;}
+
+    // Drop the error and the user bubble it answers; the retry re-adds the latter.
+    const hasUserBubble = chatMessages[index - 1]?.role === 'user';
+    const previous = chatMessages.filter(
+      (_, i) => i !== index && !(hasUserBubble && i === index - 1),
+    );
+
+    await runChatExchange(failed.failedMessage, previous);
   };
 
   /** Accepts a proposal: it becomes the current recipe. */
@@ -873,6 +904,7 @@ export const useCookingState = (): UseCookingState => {
     chatMessages,
     isChatLoading,
     sendChatMessage,
+    retryChatMessage,
     applyProposal,
     rejectProposal,
     saveChatRecipe,
