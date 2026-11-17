@@ -575,4 +575,49 @@ describe('useCookingState', () => {
       expect(result.current.isDarkMode).toBe(false);
     });
   });
+
+  describe('recette cuisinée', () => {
+    it('sends the recipe as cooked, then marks it done', async () => {
+      const { result } = await renderCookingHook();
+      const recipe: Recipe = {
+        ...MOCK_RECIPE,
+        ingredients: [{ fullText: '200 g de riz', keywords: ['riz'] }],
+      };
+
+      act(() => {
+        result.current.setRecipe(recipe);
+      });
+      mockRouteOnce('/api/cooked', {
+        id: 'x',
+        mealie: { ok: true },
+        webhook: { ok: false, error: 'HTTP 500' },
+      });
+
+      await act(async () => {
+        await result.current.handleUpload();
+      });
+
+      const [, options] = (global.fetch as jest.Mock).mock.calls.find(
+        ([url]) => url === '/api/cooked',
+      ) as [string, RequestInit];
+
+      expect(
+        JSON.parse((options.body as FormData).get('recipe') as string),
+      ).toEqual({
+        title: 'Test Recipe',
+        ingredients: ['200 g de riz'],
+        slug: MOCK_RECIPE_SLUG,
+      });
+      expect((options.body as FormData).get('photo')).toBeNull();
+      expect(result.current.isCooked).toBe(true);
+      expect(result.current.cookedWarnings).toEqual([
+        "Le webhook n'a pas répondu : HTTP 500",
+      ]);
+
+      act(() => {
+        result.current.setRecipe({ ...recipe });
+      });
+      expect(result.current.isCooked).toBe(false);
+    });
+  });
 });

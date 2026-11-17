@@ -37,8 +37,11 @@ app/
 │   │                          #        validation humaine (jamais auto-appliquée)
 │   ├── mealie/
 │   │   ├── recipes/route.ts   # GET  - Liste
-│   │   ├── detail/route.ts    # GET  - Détail
-│   │   └── upload/route.ts    # POST - Cook log + photo
+│   │   └── detail/route.ts    # GET  - Détail
+│   ├── cooked/
+│   │   ├── route.ts           # POST - « Je l'ai cuisiné » : enregistre (+ photo),
+│   │   │                      #        timeline Mealie, webhook ; GET - historique
+│   │   └── [id]/photo/route.ts # GET - Photo du plat
 │   ├── firestore/recipes/
 │   │   ├── route.ts           # GET (lister) + POST (sauvegarder)
 │   │   └── [id]/route.ts      # GET (détail) + PUT (modifier) + DELETE
@@ -56,6 +59,10 @@ app/
 │   ├── equipment.ts           # Catalogue du matériel + 4 modes du Découpe-minute,
 │   │                          # buildEquipmentPromptBlock() pour les pré-prompts IA
 │   ├── firebase.ts            # Firebase Admin SDK (getDb(), isFirebaseConfigured())
+│   ├── cooked.ts              # Recettes cuisinées : format, validation, stockage (DATA_DIR)
+│   ├── webhook.ts             # Webhook sortant (enveloppe, signature HMAC, 1 nouvel essai)
+│   ├── mealie.ts              # « Cuisinée » côté Mealie : timeline + date de dernière fois
+│   ├── photo.ts               # Réduction de la photo dans le navigateur avant envoi
 │   └── themes.ts              # Thèmes visuels
 ├── views/
 │   ├── InputView.tsx          # Accueil : recettes Mealie + sauvegardées, manuel, Gemini
@@ -72,6 +79,10 @@ app/
 - `GEMINI_API_KEY` : Clé API Google Generative AI
 - `FIREBASE_SERVICE_ACCOUNT_PATH` : Chemin vers le service account JSON
 - `FIREBASE_SERVICE_ACCOUNT_JSON` : Alternative au path, pour le déploiement
+- `DATA_DIR` : dossier des recettes cuisinées et de leurs photos (`./data` par défaut, `/app/data`
+  dans l'image : à monter en volume)
+- `WEBHOOK_URL` : reçoit `recipe.cooked` à chaque validation ; `WEBHOOK_SECRET` le signe
+- `APP_PUBLIC_URL` : adresse de l'app, pour l'URL absolue de la photo dans le webhook
 
 ## Conventions
 
@@ -85,6 +96,8 @@ app/
   réglages/accessoires/ingrédients déduits par heuristique ; 2 = l'étape déclare `settings`,
   `accessories` et `ingredients`, et **aucun regex ne tourne**. Gemini produit du 2 ; Mealie et
   le copier-coller manuel restent du texte
+- Le webhook `recipe.cooked` (corps `{event, id, at, app_url, data}`, `data` = `CookedRecord`)
+  est un contrat avec ce qui le reçoit : ajouter des champs, ne jamais en renommer
 - Le gobelet doseur est en place par défaut : seul son retrait (`state: 'removed'`) est affiché
 - Le matériel possédé est une config locale (`localStorage`, clé `ownedEquipment`), envoyée
   à Gemini dans le pré-prompt : l'IA ne propose que des étapes réalisables avec

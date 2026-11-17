@@ -268,22 +268,67 @@ describe('CookingView', () => {
       expect(mockSetView).toHaveBeenCalledWith('input');
     });
 
-    it('opens cooked modal when "Je l\'ai cuisiné !" is clicked', () => {
-      const recipeWithSlug = { ...mockRecipe, slug: 'test-recipe' };
-      render(
-        <CookingView
-          {...getMockedDefaultProps({
-            currentStep: mockRecipe.steps.length,
-            recipe: recipeWithSlug,
-          })}
-        />,
-      );
+    it('opens cooked modal when "Je l\'ai cuisiné !" is clicked, whatever the source', () => {
+      render(<CookingView {...finishedProps} />);
       fireEvent.click(
         screen.getByRole('button', {
           name: new RegExp("Je l'ai cuisiné !", 'i'),
         }),
       );
       expect(mockSetCookedModalOpen).toHaveBeenCalledWith(true);
+    });
+
+    it('does not offer a second validation', () => {
+      render(
+        <CookingView
+          {...getMockedDefaultProps({
+            currentStep: mockRecipe.steps.length,
+            isCooked: true,
+          })}
+        />,
+      );
+      expect(screen.getByText(/Recette validée/i)).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Je l'ai cuisiné/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('offers to take a photo or pick one', () => {
+      render(
+        <CookingView
+          {...getMockedDefaultProps({
+            currentStep: mockRecipe.steps.length,
+            cookedModalOpen: true,
+          })}
+        />,
+      );
+      expect(screen.getByLabelText(/Prendre une photo/i)).toHaveAttribute(
+        'capture',
+        'environment',
+      );
+      expect(screen.getByLabelText(/Choisir une image/i)).not.toHaveAttribute(
+        'capture',
+      );
+      expect(
+        screen.getByRole('button', { name: /Valider sans photo/i }),
+      ).toBeInTheDocument();
+    });
+
+    it('shows what could not be reached after validation', () => {
+      render(
+        <CookingView
+          {...getMockedDefaultProps({
+            currentStep: mockRecipe.steps.length,
+            cookedModalOpen: true,
+            uploadSuccess: true,
+            cookedWarnings: ["Le webhook n'a pas répondu : HTTP 500"],
+          })}
+        />,
+      );
+      expect(screen.getByText(/Recette validée !/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Le webhook n'a pas répondu : HTTP 500/),
+      ).toBeInTheDocument();
     });
   });
 

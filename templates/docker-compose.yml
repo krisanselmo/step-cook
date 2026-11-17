@@ -15,10 +15,15 @@ services:
       - MEALIE_BASE_URL=${MEALIE_BASE_URL}
       - MEALIE_API_TOKEN=${MEALIE_API_TOKEN}
       - MEALIE_CF_COOKIE=${MEALIE_CF_COOKIE}
+
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
+      - APP_PUBLIC_URL=${APP_PUBLIC_URL:-}
     volumes:
       # Holds gemini-preprompt.txt
       - ./private:/app/private
-      -
+      # Recipes marked as cooked and their photos.
+      - ./data:/app/data
     # Recommended on a Pi 3.
     deploy:
       resources:

@@ -55,6 +55,8 @@ export default function Home() {
     setIsUploading,
     uploadSuccess,
     setUploadSuccess,
+    cookedWarnings,
+    isCooked,
     stepParams,
     stepIngredients,
     stepAccessories,
@@ -161,6 +163,8 @@ export default function Home() {
           setIsUploading={setIsUploading}
           uploadSuccess={uploadSuccess}
           setUploadSuccess={setUploadSuccess}
+          cookedWarnings={cookedWarnings}
+          isCooked={isCooked}
           stepParams={stepParams}
           stepIngredients={stepIngredients}
           stepAccessories={stepAccessories}
