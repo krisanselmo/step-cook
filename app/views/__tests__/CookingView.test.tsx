@@ -43,6 +43,7 @@ describe('CookingView', () => {
   let mockSetActiveThemeId: jest.Mock;
   let mockSetChatOpen: jest.Mock;
   let mockSendChatMessage: jest.Mock;
+  let mockRetryChatMessage: jest.Mock;
   let mockApplyProposal: jest.Mock;
   let mockRejectProposal: jest.Mock;
   let mockSaveChatRecipe: jest.Mock;
@@ -71,6 +72,7 @@ describe('CookingView', () => {
     mockSetActiveThemeId = jest.fn();
     mockSetChatOpen = jest.fn();
     mockSendChatMessage = jest.fn();
+    mockRetryChatMessage = jest.fn();
     mockApplyProposal = jest.fn();
     mockRejectProposal = jest.fn();
     mockSaveChatRecipe = jest.fn();
@@ -109,6 +111,7 @@ describe('CookingView', () => {
       setActiveThemeId: mockSetActiveThemeId,
       setChatOpen: mockSetChatOpen,
       sendChatMessage: mockSendChatMessage,
+      retryChatMessage: mockRetryChatMessage,
       applyProposal: mockApplyProposal,
       rejectProposal: mockRejectProposal,
       saveChatRecipe: mockSaveChatRecipe,
@@ -383,6 +386,47 @@ describe('CookingView', () => {
         screen.getByText(/Proposition obsolète/i),
       ).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Appliquer/i })).not.toBeInTheDocument();
+    });
+
+    describe('échange en erreur', () => {
+      const errorMessages: ChatMessage[] = [
+        { id: 'm1', role: 'user', content: 'Ajoute des champignons' },
+        {
+          id: 'm2',
+          role: 'assistant',
+          content: "Erreur lors de l'échange avec l'assistant.",
+          isError: true,
+          failedMessage: 'Ajoute des champignons',
+          errorDetail: 'HTTP 500 - overloaded',
+        },
+      ];
+
+      it('relance l\'échange via le bouton Réessayer', () => {
+        renderChat(errorMessages);
+
+        fireEvent.click(screen.getByRole('button', { name: /Réessayer/i }));
+        expect(mockRetryChatMessage).toHaveBeenCalledWith('m2');
+      });
+
+      it('copie le message et le détail de l\'erreur', async () => {
+        const writeText = jest.fn().mockResolvedValue(undefined);
+
+        Object.assign(navigator, { clipboard: { writeText } });
+        renderChat(errorMessages);
+
+        fireEvent.click(screen.getByRole('button', { name: /Copier/i }));
+
+        expect(await screen.findByText('Copié')).toBeInTheDocument();
+        expect(writeText).toHaveBeenCalledWith(
+          'Message : Ajoute des champignons\nErreur : HTTP 500 - overloaded',
+        );
+      });
+
+      it('n\'offre pas ces actions sur une réponse normale', () => {
+        renderChat([{ id: 'm1', role: 'assistant', content: 'Oui.' }]);
+
+        expect(screen.queryByRole('button', { name: /Réessayer/i })).not.toBeInTheDocument();
+      });
     });
   });
 

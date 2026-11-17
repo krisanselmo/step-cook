@@ -61,6 +61,7 @@ export const useCookingState = jest.fn(() => ({
   chatMessages: [],
   isChatLoading: false,
   sendChatMessage: jest.fn(),
+  retryChatMessage: jest.fn(),
   applyProposal: jest.fn(),
   rejectProposal: jest.fn(),
   saveChatRecipe: jest.fn(),

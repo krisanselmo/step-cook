@@ -150,6 +150,7 @@ describe('useCookingState', () => {
     const mockAgentResponse = (payload: unknown, ok = true) => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok,
+        status: ok ? 200 : 500,
         json: async () => payload,
       } as unknown as Response);
     };
@@ -453,7 +454,74 @@ describe('useCookingState', () => {
       });
 
       expect(result.current.chatMessages[1].isError).toBe(true);
+      expect(result.current.chatMessages[1].failedMessage).toBe('Salut');
+      expect(result.current.chatMessages[1].errorDetail).toContain('500');
       expect(result.current.recipe).toEqual(CHAT_RECIPE);
+    });
+
+    it('rejoue le message échoué à la place de la bulle d\'erreur', async () => {
+      const { result } = await renderWithRecipe();
+
+      mockAgentResponse({ action: 'answer', reply: 'Oui.' });
+      await act(async () => {
+        await result.current.sendChatMessage('Premier message');
+      });
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'boom', detail: 'overloaded' }),
+      } as unknown as Response);
+      await act(async () => {
+        await result.current.sendChatMessage('Ajoute des champignons');
+      });
+
+      expect(result.current.chatMessages[3].errorDetail).toBe('HTTP 500 - overloaded');
+
+      mockAgentResponse({ action: 'answer', reply: 'Voilà.' });
+      await act(async () => {
+        await result.current.retryChatMessage(result.current.chatMessages[3].id);
+      });
+
+      expect(result.current.chatMessages.map(m => m.content)).toEqual([
+        'Premier message',
+        'Oui.',
+        'Ajoute des champignons',
+        'Voilà.',
+      ]);
+
+      const [, options] = (global.fetch as jest.Mock).mock.calls.at(-1) as [
+        string,
+        RequestInit,
+      ];
+      const body = JSON.parse(options.body as string);
+
+      expect(body.message).toBe('Ajoute des champignons');
+      expect(body.history).toEqual([
+        { role: 'user', content: 'Premier message' },
+        { role: 'assistant', content: 'Oui.' },
+      ]);
+    });
+
+    it('n\'envoie pas les échanges en erreur dans l\'historique', async () => {
+      const { result } = await renderWithRecipe();
+
+      mockAgentResponse({ error: 'boom' }, false);
+      await act(async () => {
+        await result.current.sendChatMessage('Raté');
+      });
+
+      mockAgentResponse({ action: 'answer', reply: 'Oui.' });
+      await act(async () => {
+        await result.current.sendChatMessage('Nouveau message');
+      });
+
+      const [, options] = (global.fetch as jest.Mock).mock.calls.at(-1) as [
+        string,
+        RequestInit,
+      ];
+
+      expect(JSON.parse(options.body as string).history).toEqual([]);
     });
   });
 

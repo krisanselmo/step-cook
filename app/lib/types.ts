@@ -92,6 +92,10 @@ export interface ChatMessage {
   proposal?: RecipeProposal;
   /** An error message rather than an agent reply. */
   isError?: boolean;
+  /** On a failed exchange: the user message to resend on retry. */
+  failedMessage?: string;
+  /** On a failed exchange: technical cause, for the copy button. */
+  errorDetail?: string;
 }
 
 export interface MealieRecipeSummary {

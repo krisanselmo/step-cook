@@ -12,6 +12,34 @@ import {
 /** Bounds the prompt size. */
 const MAX_HISTORY_MESSAGES = 12;
 
+/** Gemini regularly answers 503 "overloaded" or truncated JSON: both are transient. */
+const MAX_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 500;
+
+/** A 4xx (bad key, bad request) fails the same way every time, quota aside. */
+const isRetryable = (error: unknown): boolean => {
+  const status = (error as { status?: unknown } | null)?.status;
+
+  if (typeof status !== 'number') {return true;}
+
+  return status === 408 || status === 429 || status >= 500;
+};
+
+const withRetry = async <T>(run: () => Promise<T>): Promise<T> => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await run();
+    } catch (error) {
+      if (attempt >= MAX_ATTEMPTS || !isRetryable(error)) {throw error;}
+
+      console.warn(`[Gemini Chat] Attempt ${attempt} failed, retrying:`, error);
+      await new Promise(resolve =>
+        setTimeout(resolve, RETRY_BASE_DELAY_MS * 2 ** (attempt - 1)),
+      );
+    }
+  }
+};
+
 interface HistoryMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -98,26 +126,32 @@ export async function POST(req: NextRequest) {
       },
     ];
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents,
-      config: {
-        systemInstruction: buildAgentPrompt(equipment),
-        responseMimeType: 'application/json',
-        responseSchema: RESPONSE_SCHEMA,
-      },
+    // Generation and parsing are retried together: an unparsable or empty
+    // answer is as transient as a network error.
+    const parsed = await withRetry(async () => {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents,
+        config: {
+          systemInstruction: buildAgentPrompt(equipment),
+          responseMimeType: 'application/json',
+          responseSchema: RESPONSE_SCHEMA,
+        },
+      });
+
+      const text = (response.text ?? '').trim();
+      const jsonText = text
+        .replace(/^```json\s*/, '')
+        .replace(/```\s*$/, '')
+        .trim();
+      const result = JSON.parse(jsonText);
+
+      if (typeof result.reply !== 'string' || result.reply.trim() === '') {
+        throw new Error('Format de réponse invalide');
+      }
+
+      return result;
     });
-
-    const text = (response.text ?? '').trim();
-    const jsonText = text
-      .replace(/^```json\s*/, '')
-      .replace(/```\s*$/, '')
-      .trim();
-    const parsed = JSON.parse(jsonText);
-
-    if (typeof parsed.reply !== 'string' || parsed.reply.trim() === '') {
-      throw new Error('Format de réponse invalide');
-    }
 
     const proposedRecipe = parsed.recipe;
     const proposedIngredients = toCleanStringArray(proposedRecipe?.ingredients);
@@ -157,7 +191,11 @@ export async function POST(req: NextRequest) {
     console.error('[Gemini Chat] Error:', error);
 
     return NextResponse.json(
-      { error: "Erreur lors de l'échange avec l'assistant" },
+      {
+        error: "Erreur lors de l'échange avec l'assistant",
+        // Shown on demand (copy button) to diagnose from the device.
+        detail: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 },
     );
   }
