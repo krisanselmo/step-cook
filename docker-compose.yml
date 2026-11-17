@@ -23,6 +23,10 @@ services:
       - NODE_ENV=production
       # - GEMINI_MODEL_NAME=gemini-2.5-flash
 
+    # Recipes marked as cooked and their photos.
+    volumes:
+      - ./data:/app/data
+
     # Sized for a Pi 3 with 1 GB of RAM.
     deploy:
       resources:

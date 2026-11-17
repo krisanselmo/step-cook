@@ -31,6 +31,7 @@ import {
   Send,
   Save,
   AlertTriangle,
+  Image as ImageIcon,
   Wrench,
   Copy,
 } from 'lucide-react';
@@ -80,6 +81,8 @@ interface CookingViewProps {
   setIsUploading: ReturnType<typeof useCookingState>['setIsUploading'];
   uploadSuccess: ReturnType<typeof useCookingState>['uploadSuccess'];
   setUploadSuccess: ReturnType<typeof useCookingState>['setUploadSuccess'];
+  cookedWarnings: ReturnType<typeof useCookingState>['cookedWarnings'];
+  isCooked: ReturnType<typeof useCookingState>['isCooked'];
   stepParams: ReturnType<typeof useCookingState>['stepParams'];
   stepIngredients: ReturnType<typeof useCookingState>['stepIngredients'];
   stepAccessories: ReturnType<typeof useCookingState>['stepAccessories'];
@@ -137,6 +140,9 @@ export const CookingView: React.FC<CookingViewProps> = ({
   setPreviewUrl,
   isUploading,
   uploadSuccess,
+  setUploadSuccess,
+  cookedWarnings,
+  isCooked,
   stepParams,
   stepIngredients,
   stepAccessories,
@@ -398,7 +404,13 @@ export const CookingView: React.FC<CookingViewProps> = ({
               >
                 Autre Recette
               </Button>
-              {recipe.slug && (
+              {isCooked ? (
+                <span
+                  className={`flex items-center gap-2 px-8 py-3 font-bold ${theme.colors.accent}`}
+                >
+                  Recette validée <Check size={18} />
+                </span>
+              ) : (
                 <Button
                   onClick={() => setCookedModalOpen(true)}
                   className="px-8"
@@ -619,15 +631,17 @@ export const CookingView: React.FC<CookingViewProps> = ({
           />
         )}
 
-        {/* Modal "Je l'ai cuisiné" (Upload) */}
+        {/* "I cooked it" modal: optional photo, then validation */}
         {cookedModalOpen && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
             <div
               className={`w-full max-w-sm p-6 ${theme.properties.radius} shadow-2xl relative flex flex-col ${t('bg-gray-900 border border-gray-700 text-white', 'bg-white border border-gray-200 text-gray-900')}`}
             >
               <button
+                aria-label="Fermer"
                 onClick={() => {
                   setCookedModalOpen(false);
+                  setUploadSuccess(false);
                   setSelectedImage(null);
                   setPreviewUrl(null);
                 }}
@@ -639,37 +653,42 @@ export const CookingView: React.FC<CookingViewProps> = ({
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold mb-2">Bravo ! 🎉</h3>
                 <p className={`text-sm ${t('text-gray-400', 'text-gray-500')}`}>
-                  Immortalisez votre chef-d&apos;œuvre pour Mealie.
+                  Validez la recette, avec une photo du plat si vous voulez la
+                  garder.
                 </p>
               </div>
 
               <div className="flex-1 flex flex-col items-center justify-center gap-4">
                 {uploadSuccess ? (
-                  <div className="flex flex-col items-center animate-in zoom-in text-green-500">
-                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
+                  <div className="flex flex-col items-center animate-in zoom-in">
+                    <div className="w-16 h-16 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center mb-4">
                       <Check size={32} />
                     </div>
-                    <span className="font-bold">Image envoyée !</span>
+                    <span className="font-bold text-green-500">
+                      Recette validée !
+                    </span>
+                    {cookedWarnings.map(w => (
+                      <p
+                        key={w}
+                        className="mt-3 flex items-start gap-2 text-sm text-amber-500"
+                      >
+                        <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                        {w}
+                      </p>
+                    ))}
                   </div>
                 ) : (
                   <>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                    />
-
                     {previewUrl ? (
                       <div className="relative w-full aspect-square bg-black/50 rounded-lg overflow-hidden border border-gray-700">
                         <Image
                           src={previewUrl}
-                          alt="Preview"
+                          alt="Photo du plat"
                           fill
                           style={{ objectFit: 'cover' }}
                         />
                         <button
+                          aria-label="Retirer la photo"
                           onClick={() => {
                             setSelectedImage(null);
                             setPreviewUrl(null);
@@ -681,13 +700,33 @@ export const CookingView: React.FC<CookingViewProps> = ({
                       </div>
                     ) : (
                       <div
-                        onClick={() => fileInputRef.current?.click()}
-                        className={`w-full aspect-[4/3] border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors ${t('border-gray-700 hover:border-gray-500 hover:bg-gray-800/50', 'border-gray-300 hover:border-gray-400 hover:bg-gray-50')}`}
+                        className={`w-full aspect-[4/3] border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 ${t('border-gray-700', 'border-gray-300')}`}
                       >
-                        <Camera size={48} className="opacity-50" />
-                        <span className="text-sm font-medium opacity-70">
-                          Ajouter une photo (optionnel)
-                        </span>
+                        {/* A label opens its file input: no ref needed. */}
+                        <label
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer font-medium ${t('bg-gray-800 hover:bg-gray-700', 'bg-gray-100 hover:bg-gray-200')}`}
+                        >
+                          <Camera size={20} /> Prendre une photo
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            onChange={handleFileChange}
+                          />
+                        </label>
+                        <label
+                          className="flex items-center gap-2 text-sm cursor-pointer opacity-70 hover:opacity-100"
+                        >
+                          <ImageIcon size={16} /> Choisir une image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                          />
+                        </label>
                       </div>
                     )}
 
@@ -699,11 +738,11 @@ export const CookingView: React.FC<CookingViewProps> = ({
                     >
                       {isUploading ? (
                         <>
-                          <Loader2 className="animate-spin" /> Traitement...
+                          <Loader2 className="animate-spin" /> Enregistrement...
                         </>
                       ) : selectedImage ? (
                         <>
-                          <UploadCloud size={18} /> Envoyer la photo
+                          <UploadCloud size={18} /> Valider avec la photo
                         </>
                       ) : (
                         <>

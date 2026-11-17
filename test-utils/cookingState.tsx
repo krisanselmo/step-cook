@@ -85,6 +85,8 @@ export const makeCookingState = (
   setIsUploading: jest.fn(),
   uploadSuccess: false,
   setUploadSuccess: jest.fn(),
+  cookedWarnings: [],
+  isCooked: false,
   stepParams: {
     time: '--:--',
     temp: '---',

@@ -69,6 +69,51 @@ reste de l'app continue de fonctionner) :
 | **Mealie** | Importer ses recettes depuis une instance Mealie auto-hébergée | `MEALIE_BASE_URL`, `MEALIE_API_TOKEN`, `MEALIE_CF_COOKIE` |
 | **Gemini** | Générer / adapter des recettes par IA | `GEMINI_API_KEY` |
 | **Firebase Firestore** | Sauvegarder les recettes générées par IA | `FIREBASE_SERVICE_ACCOUNT_*` |
+| **Webhook** | Prévenir un autre service quand une recette est cuisinée | `WEBHOOK_URL`, `WEBHOOK_SECRET`, `APP_PUBLIC_URL` |
+
+### Recette cuisinée
+
+À la fin d'une recette, « Je l'ai cuisiné ! » la valide, avec une photo du plat
+si on veut (prise avec l'appareil ou choisie dans la galerie, réduite avant
+l'envoi). Step Cook garde chaque validation et sa photo dans `DATA_DIR`
+(`GET /api/cooked` : les dernières, `GET /api/cooked/<id>/photo` : la photo).
+Pour une recette Mealie, la validation s'ajoute à sa timeline, avec la photo, et
+met à jour sa date de dernière réalisation.
+
+Avec `WEBHOOK_URL`, chaque validation y est envoyée en `POST` JSON (un nouvel
+essai si le service ne répond pas) :
+
+```json
+{
+  "event": "recipe.cooked",
+  "id": "identifiant de l'envoi",
+  "at": "2026-11-17T18:30:05.000Z",
+  "app_url": "https://cook.example.org",
+  "data": {
+    "id": "20261117-183005-a1b2c3",
+    "cooked_at": "2026-11-17T18:30:05.000Z",
+    "recipe": {
+      "title": "Gratin dauphinois",
+      "source": "mealie",
+      "slug": "gratin-dauphinois",
+      "saved_id": null,
+      "source_url": null,
+      "ingredients": [{ "text": "1 kg de pommes de terre" }]
+    },
+    "photo": {
+      "path": "/api/cooked/20261117-183005-a1b2c3/photo",
+      "url": "https://cook.example.org/api/cooked/20261117-183005-a1b2c3/photo",
+      "content_type": "image/jpeg",
+      "size": 412345
+    }
+  }
+}
+```
+
+`source` vaut `mealie`, `saved` (recette sauvegardée) ou `other`. `photo` est
+`null` sans photo, et `photo.url` sans `APP_PUBLIC_URL`. Avec `WEBHOOK_SECRET`,
+la requête porte `Authorization: Bearer <secret>` et
+`X-StepCook-Signature: sha256=<HMAC du corps>`.
 
 Détail des variables d'environnement : voir [`CLAUDE.md`](CLAUDE.md).
 
@@ -94,8 +139,10 @@ services:
       - .env.local        # cf. .env.example — toutes les variables sont optionnelles
     environment:
       - NODE_ENV=production
-    # Uniquement si vous utilisez Firebase via un fichier service account :
     volumes:
+      # Recettes cuisinées et leurs photos :
+      - ./data:/app/data
+      # Uniquement si vous utilisez Firebase via un fichier service account :
       - ./private:/app/private
     deploy:
       resources:

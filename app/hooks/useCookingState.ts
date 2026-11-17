@@ -21,6 +21,7 @@ import {
   formatMealieToText,
   StepAccessory,
 } from '@/app/lib/utils';
+import { shrinkPhoto } from '@/app/lib/photo';
 import {
   DEFAULT_EQUIPMENT_IDS,
   sanitizeEquipmentIds,
@@ -81,6 +82,10 @@ interface UseCookingState {
   setIsUploading: React.Dispatch<React.SetStateAction<boolean>>;
   uploadSuccess: boolean;
   setUploadSuccess: React.Dispatch<React.SetStateAction<boolean>>;
+  /** After a validation: integrations that could not be reached. */
+  cookedWarnings: string[];
+  /** This recipe was validated as cooked: once is enough. */
+  isCooked: boolean;
   stepParams: StepParams;
   stepIngredients: Ingredient[];
   stepAccessories: StepAccessory[];
@@ -233,6 +238,9 @@ export const useCookingState = (): UseCookingState => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadSuccess, setUploadSuccess] = useState<boolean>(false);
+  const [cookedWarnings, setCookedWarnings] = useState<string[]>([]);
+  // The recipe object itself: loading another one resets it, no effect needed.
+  const [cookedRecipe, setCookedRecipe] = useState<Recipe | null>(null);
 
   const [stepParams, setStepParams] = useState<StepParams>({
     time: '--:--',
@@ -830,41 +838,63 @@ export const useCookingState = (): UseCookingState => {
   };
 
   const handleUpload = async () => {
-    if (!recipe?.slug) {
+    if (!recipe) {
       return;
     }
 
     setIsUploading(true);
     const formData = new FormData();
 
+    formData.append(
+      'recipe',
+      JSON.stringify({
+        title: recipe.title,
+        ingredients: recipe.ingredients.map(i => i.fullText),
+        slug: recipe.slug,
+        firestoreId: recipe.firestoreId,
+        orgURL: recipe.orgURL,
+      }),
+    );
+
     if (selectedImage) {
-      formData.append('image', selectedImage);
+      formData.append('photo', await shrinkPhoto(selectedImage));
     }
-    formData.append('slug', recipe.slug);
 
     try {
-      // Always call the API; it handles a missing image on its own.
-      const res = await fetch('/api/mealie/upload', {
+      const res = await fetch('/api/cooked', {
         method: 'POST',
         body: formData,
       });
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.details || 'Erreur inconnue');
+        throw new Error(data.details || data.error || `HTTP ${res.status}`);
       }
 
+      const warnings = [
+        data.mealie?.ok === false &&
+          `Mealie n'a pas été mis à jour : ${data.mealie.error}`,
+        data.webhook?.ok === false &&
+          `Le webhook n'a pas répondu : ${data.webhook.error}`,
+      ].filter((w): w is string => typeof w === 'string');
+
+      setCookedWarnings(warnings);
+      setCookedRecipe(recipe);
       setUploadSuccess(true);
-      setTimeout(() => {
-        setCookedModalOpen(false);
-        setUploadSuccess(false);
-        setSelectedImage(null);
-        setPreviewUrl(null);
-      }, 2000);
+
+      // Warnings stay until the modal is closed.
+      if (warnings.length === 0) {
+        setTimeout(() => {
+          setCookedModalOpen(false);
+          setUploadSuccess(false);
+          setSelectedImage(null);
+          setPreviewUrl(null);
+        }, 2000);
+      }
     } catch (error) {
-      console.error('Erreur upload:', error);
+      console.error('Erreur validation:', error);
       alert(
-        "Erreur lors de l'envoi : " +
+        "Erreur lors de l'enregistrement : " +
           (error instanceof Error ? error.message : String(error)),
       );
     } finally {
@@ -920,6 +950,8 @@ export const useCookingState = (): UseCookingState => {
     setIsUploading,
     uploadSuccess,
     setUploadSuccess,
+    cookedWarnings,
+    isCooked: recipe !== null && cookedRecipe === recipe,
     stepParams,
     stepIngredients,
     stepAccessories,
